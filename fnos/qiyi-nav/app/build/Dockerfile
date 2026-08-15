@@ -3,7 +3,7 @@ FROM node:18-alpine
 
 # 元数据
 LABEL org.opencontainers.image.title="奇易智能导航" \
-      org.opencontainers.image.version="3.1.2" \
+      org.opencontainers.image.version="3.1.3" \
       org.opencontainers.image.description="带后台管理与 Docker 部署的网址导航（零依赖 Node 后端）"
 
 # 时区：国内 NAS 日志/时间显示正确
