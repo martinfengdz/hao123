@@ -1,6 +1,6 @@
 /**
  * 奇易智能导航系统 - 零依赖后端服务器
- * 版本: 3.1.2
+ * 版本: 3.1.3
  * 功能: 静态站点服务 + REST API + Cookie 鉴权（基于 Node 内置 http/crypto/fs）
  *
  * 启动: node server.js   （或通过 Docker）
@@ -20,7 +20,7 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
 const PORT = parseInt(process.env.PORT || '1315', 10);
 const DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 const PEPPER = process.env.SESSION_SECRET || 'qiyi-nav-default-pepper';
-const VERSION = '3.1.2';
+const VERSION = '3.1.3';
 const TOKEN_TTL = 7 * 24 * 3600 * 1000; // 7 天
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -165,7 +165,7 @@ const DEFAULT_FOOTER_HTML = [
     '  <div class="footer-status">',
     '    <span id="system-status"><i class="fas fa-circle status-online"></i> 系统正常</span>',
     '    <span class="footer-separator">|</span>',
-    '    <span>版本: <span class="version">V3.1.2</span></span>',
+    '    <span>版本: <span class="version">V3.1.3</span></span>',
     '    <span class="footer-separator">|</span>',
     '    <span>© <span id="current-year-footer"></span> 奇易智能导航</span>',
     '    <span class="footer-separator">|</span>',
@@ -474,6 +474,68 @@ async function proxyFavicon(req, res, urlPath) {
   return sendJson(res, 404, { error: '无法获取 favicon' });
 }
 
+// 图标自检：扫描全部链接的域名，统计 favicon 获取情况。
+// cached=true 表示本地已缓存（前台能正常显示）；obtainable 仅在 deep 模式下才会去在线探测。
+// 返回的 domains 列表已排序：未获得的排在前面，便于后台直接查看“哪些域名没拿到图标”。
+async function checkIcons(deep) {
+  const data = loadLinks();
+  const links = Array.isArray(data) ? data : Object.values(data).flat();
+  const seen = new Map(); // domain -> { count, names:Set }
+  for (const l of links) {
+    const u = (l && (l.url || l.href)) ? (l.url || l.href) : '';
+    const d = domainOf(u);
+    if (!d) continue;
+    if (!seen.has(d)) seen.set(d, { count: 0, names: new Set() });
+    const e = seen.get(d);
+    e.count++;
+    if (l.name) e.names.add(String(l.name));
+  }
+  const domains = Array.from(seen.keys());
+  let ok = 0;
+  const cachedList = [];
+  const missList = [];
+  for (const d of domains) {
+    const p = faviconPaths(d);
+    const cached = fs.existsSync(p.bin) && fs.existsSync(p.type) && fs.readFileSync(p.bin).length > 32;
+    const entry = {
+      domain: d,
+      cached: cached,
+      obtainable: cached,
+      count: seen.get(d).count,
+      names: Array.from(seen.get(d).names).slice(0, 5)
+    };
+    if (cached) { ok++; cachedList.push(entry); }
+    else { missList.push(entry); }
+  }
+  // deep 模式：对未缓存的域名并发探测是否还能在线获取（并发上限 8，避免阻塞过久）
+  if (deep && missList.length) {
+    const LIMIT = 8;
+    let idx = 0;
+    async function worker() {
+      while (idx < missList.length) {
+        const cur = missList[idx++];
+        try {
+          const got = await fetchAndCacheFavicon(cur.domain, false);
+          if (got) { cur.obtainable = true; cur.cached = true; ok++; }
+        } catch (e) { /* 单个失败忽略 */ }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(LIMIT, missList.length) }, worker));
+  }
+  const total = domains.length;
+  const list = missList.concat(cachedList); // 未获得在前，便于查看
+  return {
+    version: VERSION,
+    total: total,
+    ok: ok,
+    missing: total - ok,
+    rate: total ? Math.round((ok / total) * 100) : 100,
+    deep: !!deep,
+    checkedAt: new Date().toISOString(),
+    domains: list
+  };
+}
+
 // 鉴权后：抓取网页标题与图标（后台"自动获取"）
 async function fetchMeta(req, res, urlPath) {
   const qi = urlPath.indexOf('?');
@@ -728,6 +790,16 @@ async function handleApi(req, res, urlPath) {
   if (method === 'POST' && pathname === '/api/favicons/refresh') {
     prefetchAllFavicons(true).catch(() => {});
     return sendJson(res, 200, { ok: true, msg: '图标刷新已在后台进行，稍后刷新页面即可生效' });
+  }
+
+  // 图标自检报告（鉴权）：列出未获得 favicon 的域名 + 成功率；?deep=1 在线探测可获取性
+  if (method === 'GET' && pathname === '/api/icon-check') {
+    const deep = /[?&]deep=1\b/.test(urlPath);
+    try {
+      return sendJson(res, 200, await checkIcons(deep));
+    } catch (e) {
+      return sendJson(res, 500, { error: '图标自检失败: ' + e.message });
+    }
   }
 
   // 保存集成设置（SearXNG 等）
