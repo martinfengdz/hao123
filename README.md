@@ -273,3 +273,10 @@ docker compose up -d --build
 - `GET /api/settings` / `PUT /api/settings`：读取 / 保存集成配置（写入需登录）。
 
 > 注意：`server.js` 代理默认 8 秒超时；SearXNG 实例需开启 `format: json`（本项目 `searxng/settings.yml` 已配置）。
+
+
+## 界面预览
+
+![前端界面预览](assets/screenshot-frontend.png)
+
+> 前端导航首页界面截图。
