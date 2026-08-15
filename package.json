@@ -1,0 +1,15 @@
+{
+  "name": "qiyi-nav",
+  "version": "3.1.2",
+  "description": "奇易智能导航系统 - 带后台管理与 Docker 部署（零依赖 Node 后端）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node scripts/seed.js",
+    "verify": "node scripts/verify.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "license": "MIT"
+}
