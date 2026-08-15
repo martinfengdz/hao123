@@ -1,12 +1,12 @@
-"""V3.1.2 同步脚本：复用 build_314 逻辑，新增图标图片分发。"""
+"""V3.1.3 同步脚本：复用 build_314 逻辑，新增图标图片分发。"""
 import shutil, re, sys, os
 from pathlib import Path
 
 ROOT = Path('C:/Users/win10/Desktop/fsdownload/hao123')
 SRC = ROOT
 BUILD = ROOT / 'fnos' / 'qiyi-nav' / 'app' / 'build'
-OLD = '3.1.2'
-NEW = '3.1.2'
+OLD = '3.1.3'
+NEW = '3.1.3'
 
 # 1. 同步代码文件（与 314 相同）
 FILES = [
