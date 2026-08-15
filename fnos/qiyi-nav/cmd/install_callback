@@ -1,0 +1,5 @@
+#!/bin/bash
+
+### This script is called by fnOS appcenter.
+
+exit 0
