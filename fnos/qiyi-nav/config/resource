@@ -1,0 +1,38 @@
+{
+    "docker-project":
+    {
+        "projects":
+        [
+            {
+                "name": "qiyi-nav",
+                "path": "docker"
+            }
+        ]
+    },
+    "data-share":
+    {
+        "shares":
+        [
+            {
+                "name": "qiyi-nav",
+                "permission":
+                {
+                    "rw":
+                    [
+                        "docker-qiyi-nav"
+                    ]
+                }
+            },
+            {
+                "name": "qiyi-nav/data",
+                "permission":
+                {
+                    "rw":
+                    [
+                        "docker-qiyi-nav"
+                    ]
+                }
+            }
+        ]
+    }
+}
