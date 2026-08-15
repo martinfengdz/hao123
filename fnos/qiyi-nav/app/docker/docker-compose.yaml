@@ -5,9 +5,9 @@ services:
       context: ../build
       dockerfile: Dockerfile
     # 本地构建出的镜像名（不依赖任何外部镜像仓库，避免 invalid reference 报错）
-    image: qiyi-nav:3.1.2
+    image: qiyi-nav:3.1.3
     # 如需改用 GHCR 在线镜像：删掉上面 build 段，并取消下一行注释（<用户名> 必须全小写）
-    # image: ghcr.io/<你的GitHub用户名>/qiyi-nav:3.1.2
+    # image: ghcr.io/<你的GitHub用户名>/qiyi-nav:3.1.3
     container_name: qiyi-nav
     restart: unless-stopped
     ports:
