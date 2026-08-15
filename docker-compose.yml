@@ -1,0 +1,48 @@
+services:
+  qiyi-nav:
+    build: .
+    container_name: qiyi-nav
+    # 宿主端口:容器端口（统一使用 1315）
+    ports:
+      - "1315:1315"
+    environment:
+      - TZ=Asia/Shanghai
+      - PORT=1315
+      - ADMIN_PASSWORD=admin                         # ⚠️ 默认 admin，建议改成你的强密码
+      - SESSION_SECRET=your-random-secret-here      # ⚠️ 必改：随机长字符串，变更会使已登录会话失效
+      - DATA_DIR=/app/data
+      - SEARXNG_URL=http://searxng:8080             # 指向同 compose 内的 SearXNG 服务（综合版）
+    volumes:
+      # 数据持久化：把宿主机目录挂到 /app/data（容器删除/更新数据不丢）
+      # 飞牛示例路径：/vol1/1000/docker/qiyi-nav/data:/app/data
+      # 首次启动前请先在飞牛文件管理器创建该目录，并允许 Docker 读写
+      - ./data:/app/data
+    depends_on:
+      - searxng
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:1315/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---- SearXNG 综合搜索引擎（与导航站一起部署的"综合版"）----
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    ports:
+      # 宿主端口:容器端口；若冲突改前面的宿主端口（如 8082:8080）
+      - "8081:8080"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      # SearXNG 配置：开启 JSON 格式（供导航代理调用）、关闭访问频率限制（个人/家庭使用）
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
