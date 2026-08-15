@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+*.md
+.env
+data/links.json
+data/config.json
+default-seed.json
+cj*.txt
+*.log
+.DS_Store
