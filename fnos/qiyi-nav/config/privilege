@@ -1,0 +1,8 @@
+{
+    "defaults":
+    {
+        "run-as": "package"
+    },
+    "username": "docker-qiyi-nav",
+    "groupname": "docker-qiyi-nav"
+}
