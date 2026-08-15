@@ -1,4 +1,4 @@
-# 奇易智能导航系统（V3.1.2）
+# 奇易智能导航系统（V3.1.3）
 
 带**后台管理**与 **Docker 部署**的网址导航站。在原纯静态导航站基础上增加了：
 
@@ -184,7 +184,7 @@ git push -u origin main
 推送后，GitHub Actions 会自动执行 `.github/workflows/docker.yml`：
 
 - 推到 `main` → 构建 `ghcr.io/<用户名>/qiyi-nav:latest`
-- 打版本 tag `v3.1.2` → 同时出 `:3.1.2`、`:2.3`、`:latest`
+- 打版本 tag `v3.1.3` → 同时出 `:3.1.3`、`:2.3`、`:latest`
 
 镜像地址固定为：
 
@@ -220,10 +220,10 @@ docker run -d --name qiyi-nav \
 1. 改代码后提交并打 tag：
    ```bash
    git add -A && git commit -m "fix: xxx"
-   git tag v3.1.2
+   git tag v3.1.3
    git push && git push --tags
    ```
-2. GitHub Actions 自动构建新镜像（`:latest` + `:3.1.2`）。
+2. GitHub Actions 自动构建新镜像（`:latest` + `:3.1.3`）。
 3. 飞牛上「更新容器」→ 重新拉取 `latest` 重建（挂载的 `data` 卷保留，导航数据不丢）。
    - 或部署一个 `watchtower` 容器监控 `qiyi-nav`，镜像一更新自动重启。
 
@@ -233,7 +233,7 @@ docker run -d --name qiyi-nav \
 
 ### 版本号约定
 
-- `package.json` 与 `server.js` 顶部 `VERSION` 保持一致（当前 `3.1.2`）。
+- `package.json` 与 `server.js` 顶部 `VERSION` 保持一致（当前 `3.1.3`）。
 - tag 用 `vX.Y.Z` 语义化版本。
 
 ---
