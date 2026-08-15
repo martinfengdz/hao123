@@ -1026,6 +1026,18 @@ body {
     background: #fff;
 }
 
+/* favicon 未获得时的自检占位图标（齿轮：代表“自检/自动获取”） */
+.link-icon-missing {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef0f3;
+    color: #8a8f98;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.link-icon-missing svg { width: 14px; height: 14px; display: block; }
+.dark-mode .link-icon-missing { background: #2a2f3a; color: #9aa0aa; }
+
 /* 链接颜色标记类 */
 .link-item.red { border-left-color: var(--danger-color); }
 .link-item.green { border-left-color: var(--success-color); }
