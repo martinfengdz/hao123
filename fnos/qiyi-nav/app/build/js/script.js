@@ -7,7 +7,7 @@
 
 // ==================== 全局配置 ====================
 const CONFIG = {
-    VERSION: '3.1.2',
+    VERSION: '3.1.3',
     DEFAULT_PASSWORD: 'admin',
     LINKS_PER_PAGE: 35,
     SEARCH_ENGINES: {
@@ -58,6 +58,20 @@ const CONFIG = {
     }
 };
 
+// ==================== 图标自检占位 ====================
+// favicon 加载失败时（/api/favicon 返回 404 或自定义图标地址失效）回退显示的内联 SVG 占位图标（齿轮：代表“自检/自动获取”）
+const SELFCHECK_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.03 7.03 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.74 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.03.31-.05.62-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.58-.24 1.12-.56 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
+
+// favicon 加载失败时调用：用占位图标替换 <img>，避免空白/裂图；仅替换一次（dataset.fb 防重复）
+window.qiyiFaviconFallback = function (img) {
+    if (!img || img.dataset.fb) return;
+    img.dataset.fb = '1';
+    const span = document.createElement('span');
+    span.className = 'link-icon link-icon-missing';
+    span.innerHTML = SELFCHECK_ICON_SVG;
+    if (img.parentNode) img.parentNode.replaceChild(span, img);
+};
+
 // 整页页脚默认 HTML（footerHtml 为空时作默认值；也与后台「恢复默认」写入的整段页脚代码一致）
 const DEFAULT_FOOTER_HTML = [
     '<div class="footer-sections">',
@@ -67,7 +81,7 @@ const DEFAULT_FOOTER_HTML = [
     '  <div class="footer-status">',
     '    <span id="system-status"><i class="fas fa-circle status-online"></i> 系统正常</span>',
     '    <span class="footer-separator">|</span>',
-    '    <span>版本: <span class="version">V3.1.2</span></span>',
+    '    <span>版本: <span class="version">V3.1.3</span></span>',
     '    <span class="footer-separator">|</span>',
     '    <span>© <span id="current-year-footer"></span> 奇易智能导航</span>',
     '    <span class="footer-separator">|</span>',
@@ -1332,9 +1346,16 @@ function createLinkElement(link, category, index) {
             </button>
         </div>` : '';
 
+    const favSrc = link.favicon
+        ? link.favicon
+        : (typeof Api !== 'undefined' && Api.faviconUrl ? Api.faviconUrl(link.url) : '');
+    const iconHtml = favSrc
+        ? `<img class="link-icon" src="${escapeHtml(favSrc)}" alt="" loading="lazy" onerror="window.qiyiFaviconFallback(this)">`
+        : `<span class="link-icon link-icon-missing">${SELFCHECK_ICON_SVG}</span>`;
+
     linkItem.innerHTML = `
-        <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="link-main">
-            ${link.favicon || (typeof Api !== 'undefined' && Api.faviconUrl) ? `<img class="link-icon" src="${link.favicon ? link.favicon : (typeof Api !== 'undefined' ? Api.faviconUrl(link.url) : '')}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+        <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="link-main">
+            ${iconHtml}
             <span class="link-name">${escapeHtml(link.name)}</span>
         </a>
         ${actionsHtml}
