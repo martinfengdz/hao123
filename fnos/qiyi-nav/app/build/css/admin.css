@@ -598,3 +598,22 @@ html, body { margin: 0; padding: 0; }
     background: var(--adm-panel-2); color: var(--adm-text-light); cursor: pointer; flex: none;
 }
 .field-restore:hover { border-color: var(--adm-primary); color: var(--adm-primary); }
+
+/* ==================== 图标自检 ==================== */
+.icon-check-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.icon-check-stat { background: var(--adm-panel-2); border-radius: 12px; padding: 12px 8px; text-align: center; }
+.icon-check-stat .num { display: block; font-size: 1.5rem; font-weight: 800; color: var(--adm-text); line-height: 1.1; }
+.icon-check-stat .num.ok { color: var(--adm-success, #2ecc71); }
+.icon-check-stat .num.miss { color: var(--adm-danger, #e23b3b); }
+.icon-check-stat .lbl { font-size: .72rem; color: var(--adm-text-light); }
+.icon-check-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.icon-check-list { max-height: 320px; overflow: auto; border: 1px solid var(--adm-border); border-radius: 12px; padding: 6px; }
+.icon-check-empty { color: var(--adm-text-light); text-align: center; padding: 18px 0; margin: 0; }
+.icon-check-ok { color: var(--adm-success, #2ecc71); text-align: center; padding: 18px 0; margin: 0; }
+.icon-list-head { font-size: .8rem; font-weight: 700; color: var(--adm-text-light); padding: 6px 8px; position: sticky; top: 0; background: var(--adm-panel); }
+.icon-row { display: flex; flex-direction: column; gap: 2px; padding: 8px; border-radius: 8px; }
+.icon-row:nth-child(odd) { background: var(--adm-panel-2); }
+.icon-domain { font-weight: 700; font-size: .9rem; color: var(--adm-text); word-break: break-all; }
+.icon-meta { font-size: .74rem; color: var(--adm-text-light); }
+.icon-names { font-size: .74rem; color: var(--adm-text-light); opacity: .85; word-break: break-all; }
+.icon-check-actions { margin-top: 12px; display: flex; justify-content: flex-end; }
