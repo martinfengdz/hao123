@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!-- 
+      基础元数据设置
+      UTF-8编码确保中文字符正确显示
+      移动端适配：固定缩放比例，禁止用户缩放
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <!-- 页面标题 -->
+    <title>奇易智能导航系统</title>
+
+    <!-- 外部样式表 -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Font Awesome图标库，用于界面图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 网站图标（由 JS 根据后台「LOGO 设计」动态切换；默认 /assets/logo-default.png） -->
+    <link id="site-favicon" rel="icon" href="/assets/logo-default.png">
+</head>
+<body>
+    <!-- 主容器：包裹所有页面内容 -->
+    <div class="container">
+        <!-- 头部区域：LOGO / 时间 / 搜索功能 -->
+        <div class="header">
+            <!-- 页眉自定义代码挂载点（后台「外观」注入，前后台通用） -->
+            <div id="custom-header"></div>
+            <!-- 主区：LOGO + 两个日期 居左成组，问候语居中，工具按钮推到最右 -->
+            <div class="header-main">
+                <div class="header-brand">
+                    <!-- 前台 LOGO：后台「LOGO 设计」可自定义上传；默认走 /assets/logo-default.png
+                         位置：两个日期（公历 #current-time / 农历 #lunar-date）左边，同排不占整行 -->
+                    <div class="site-logo" id="site-logo-wrap">
+                        <img id="site-logo" src="/assets/logo-default.png" alt="logo">
+                    </div>
+                    <!-- 时间显示区域（两个日期） -->
+                    <div class="time-display">
+                        <div id="current-time">正在加载时间...</div>
+                        <div id="lunar-date">正在加载农历日期...</div>
+                        <div>© <span id="current-year"></span> 奇易智能导航 <span class="incognito-badge">🔒 无痕</span></div>
+                    </div>
+                </div><!-- /header-brand -->
+
+                <!-- 问候语区域 -->
+                <div class="greeting-container" id="greeting-container">
+                    <span id="greeting-text"></span>
+                    <button id="close-greeting" class="btn-close-greeting" title="关闭问候语">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- 头部工具按钮 -->
+                <div class="header-tools">
+                    <!-- 主题切换按钮 -->
+                    <button id="toggle-theme" class="btn btn-warning" title="切换亮/暗主题">
+                        <i class="fas fa-moon"></i> 主题
+                    </button>
+
+                    <!-- 设为主页按钮 -->
+                    <button id="set-homepage" class="btn btn-success" title="设为主页">
+                        <i class="fas fa-home"></i> 主页
+                    </button>
+
+                    <!-- 刷新页面按钮 -->
+                    <button id="refresh-page" class="btn btn-secondary" title="刷新页面">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div><!-- /header-main -->
+        </div>
+
+        <!-- 搜索区域 -->
+        <div class="search-section">
+            <form class="search-form" id="search-form">
+                <!-- 搜索输入框和按钮 -->
+                <div class="search-box" style="position:relative;">
+                    <input type="text" class="search-input" id="search-input" 
+                           value="" placeholder="请输入搜索关键词..."
+                           autocomplete="off" data-search-type="web">
+                    <!-- 搜索建议下拉框 -->
+                    <div class="search-suggestions" id="search-suggestions" style="display:none;"></div>
+                    <button type="submit" class="search-btn" id="search-btn" title="使用当前选择的搜索引擎搜索">
+                        <i class="fas fa-search"></i> <span>搜索</span>
+                    </button>
+                </div>
+
+                <!-- 快速搜索建议链接区域，通过JS动态加载 -->
+                <div class="search-quick-links" id="search-quick-links">
+                    <!-- 智能搜索建议将通过JS动态加载 -->
+                </div>
+
+                <!-- 搜索引擎选择区域 -->
+                <div class="search-engines">
+                    <span class="search-engine-label">搜索引擎:</span>
+                    <label class="engine-label"><input type="radio" name="search-engine" value="baidu" checked> 百度</label>
+                    <label class="engine-label"><input type="radio" name="search-engine" value="google"> 谷歌</label>
+                    <label class="engine-label"><input type="radio" name="search-engine" value="bing"> 必应</label>
+                    <label class="engine-label"><input type="radio" name="search-engine" value="360"> 360</label>
+                    <label class="engine-label"><input type="radio" name="search-engine" value="searxng"> 综合</label>
+                </div>
+            </form>
+        </div>
+
+        <!-- 主内容区域：标签页和链接列表 -->
+        <section class="main-content">
+            <!-- 主标签页导航：由后台「外观」动态渲染（顺序/名称/显隐可自定义） -->
+            <div class="main-tabs" id="main-tabs"></div>
+
+            <!-- 链接容器区域，包含链接列表和分页 -->
+            <div class="links-container">
+                <!-- 链接列表头部：统计信息和搜索工具 -->
+                <div class="links-header">
+                    <div class="links-stats">
+                        <span id="links-count">0</span> 个链接
+                        <span class="last-updated">最后更新: <span id="last-updated-time">今天</span></span>
+                    </div>
+                    <div class="links-tools">
+                        <!-- 在当前分类内搜索的输入框 -->
+                        <input type="text" class="search-links-input" id="search-links-input" 
+                               placeholder="🔎 在当前分类中筛选...">
+                        <!-- 排序按钮 -->
+                        <button class="btn btn-small btn-secondary" id="sort-links" title="排序方式">
+                            <i class="fas fa-sort-alpha-down"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 各分类链接列表容器，初始只显示推荐网址 -->
+                <!-- 七行五列网格布局，每页显示35个链接 -->
+                <div class="links-grid" id="recommended-links">
+                    <!-- 推荐网址内容将通过JS动态加载 -->
+                </div>
+
+                <!-- 其他分类链接容器，默认隐藏 -->
+                <div class="links-grid" id="proxy-links" style="display:none;"></div>
+                <div class="links-grid" id="internal-links" style="display:none;"></div>
+                <div class="links-grid" id="software-links" style="display:none;"></div>
+                <div class="links-grid" id="business-links" style="display:none;"></div>
+                <div class="links-grid" id="common-links" style="display:none;"></div>
+                <div class="links-grid" id="finance-links" style="display:none;"></div>
+                <div class="links-grid" id="work-links" style="display:none;"></div>
+                <div class="links-grid" id="side-links" style="display:none;"></div>
+
+                <!-- 链接列表底部：添加链接按钮和分页控件 -->
+                <div class="links-footer">
+                    <!-- 添加链接按钮（需要管理权限） -->
+                    <button class="btn add-link-btn" id="add-link-btn-bottom" data-tab="recommended">
+                        <i class="fas fa-plus"></i> 添加网址
+                    </button>
+                    <!-- 分页控件 -->
+                    <div class="links-pagination">
+                        <button class="btn-pagination" id="prev-page" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="page-info">第 <span id="current-page">1</span> 页 / 共 <span id="total-pages">1</span> 页</span>
+                        <button class="btn-pagination" id="next-page" disabled>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 快捷访问区域：常用内部链接（由后台「外观」动态渲染） -->
+        <div class="quick-access">
+            <div class="quick-access-title">快捷访问</div>
+            <div class="quick-access-links" id="quick-access-links"></div>
+        </div>
+
+        <!-- 页脚区域：整段由「外观」footerHtml 接管（V3.1.2 起）；以下为兜底静态内容 -->
+        <footer id="site-footer">
+            <div class="footer-sections">
+                <!-- 功能链接区域（footerHtml 为空时由后台「外观」动态渲染） -->
+                <div class="footer-links" id="footer-links"></div>
+            </div>
+
+            <!-- 系统信息区域 -->
+            <div class="footer-info">
+                <div class="footer-status">
+                    <span id="system-status"><i class="fas fa-circle status-online"></i> 系统正常</span>
+                    <span class="footer-separator">|</span>
+                    <span>版本: <span class="version">V3.1.2</span></span>
+                    <span class="footer-separator">|</span>
+                    <span>© <span id="current-year-footer"></span> 奇易智能导航</span>
+                    <span class="footer-separator">|</span>
+                    <span class="update-note">更新: 全量代码审查修复/CSS去重/JS安全加固/暗色模式修正</span>
+                    <span class="footer-separator">|</span>
+                    <span id="visit-count">访问: 0</span>
+                </div>
+            </div>
+            <!-- 页脚自定义代码挂载点（后台「外观」注入，前后台通用） -->
+            <div id="custom-footer"></div>
+        </footer>
+    </div>
+
+    <!-- ==================== 模态框区域 ==================== -->
+
+    <!-- 添加/编辑网址模态框 -->
+    <div class="modal" id="link-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-plus-circle"></i> <span id="modal-action">添加</span>网址
+                </h3>
+                <button class="modal-close" id="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="link-form">
+                <!-- 隐藏字段存储链接索引和原始分类 -->
+                <input type="hidden" id="link-index">
+                <input type="hidden" id="link-original-category">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="link-name" class="form-label">网站名称 *</label>
+                        <input type="text" id="link-name" class="form-input" 
+                               placeholder="输入网站名称" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="link-favicon" class="form-label">网站图标</label>
+                        <input type="text" id="link-favicon" class="form-input" 
+                               placeholder="可选: 输入favicon URL">
+                        <div class="form-hint">留空将使用默认图标</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="link-url" class="form-label">网站地址 *</label>
+                    <input type="url" id="link-url" class="form-input" 
+                           placeholder="https://example.com" required>
+                    <div class="form-hint">支持 http:// 或 https:// 开头的网址</div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="link-category" class="form-label">分类 *</label>
+                        <select id="link-category" class="form-select" required>
+                            <option value="recommended">推荐网址</option>
+                            <option value="proxy">代理系统</option>
+                            <option value="internal">内部系统</option>
+                            <option value="software">软件工具</option>
+                            <option value="business">在线业务</option>
+                            <option value="common">常用网址</option>
+                            <option value="finance">财务理财</option>
+                            <option value="work">工作工具</option>
+                            <option value="side">AI工具</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="link-color" class="form-label">颜色标记</label>
+                        <select id="link-color" class="form-select">
+                            <option value="">默认</option>
+                            <option value="red">红色</option>
+                            <option value="green">绿色</option>
+                            <option value="blue">蓝色</option>
+                            <option value="orange">橙色</option>
+                            <option value="purple">紫色</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                    <button type="submit" class="btn btn-success" id="save-btn">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 权限验证模态框 -->
+    <div class="modal" id="permission-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-lock"></i> 管理权限验证
+                </h3>
+                <button class="modal-close" id="permission-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label for="permission-password" class="form-label">请输入管理密码</label>
+                <input type="password" id="permission-password" class="form-input" 
+                       placeholder="输入密码" required>
+                <div class="form-hint">默认密码: admin（首次使用后请修改）</div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-permission">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button type="button" class="btn btn-success" id="confirm-permission">
+                    <i class="fas fa-check"></i> 验证
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知组件：显示操作反馈信息 -->
+    <div class="notification" id="notification">
+        <span id="notification-text">操作成功！</span>
+        <span class="close" id="notification-close">
+            <i class="fas fa-times"></i>
+        </span>
+    </div>
+
+    <!-- 浮动按钮组件：固定在右下角的快捷操作按钮 -->
+    <div class="floating-buttons">
+        <button class="floating-btn" id="floating-add" title="快速添加">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button class="floating-btn" id="floating-menu" title="更多功能">
+            <i class="fas fa-bars"></i>
+        </button>
+        <button class="floating-btn" id="floating-top" title="返回顶部">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+        <button class="floating-btn" id="floating-theme" title="切换主题">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <!-- 浮动菜单：点击菜单按钮弹出的功能菜单 -->
+    <div class="floating-menu" id="floating-menu-panel">
+        <div class="floating-menu-header">
+            <i class="fas fa-cogs"></i> 功能菜单
+        </div>
+        <div class="floating-menu-items">
+            <button class="floating-menu-item" id="menu-admin-management">
+                <i class="fas fa-cogs"></i> 网址管理
+            </button>
+            <button class="floating-menu-item" id="menu-export-data">
+                <i class="fas fa-download"></i> 导出数据
+            </button>
+            <button class="floating-menu-item" id="menu-clear-cache">
+                <i class="fas fa-trash-alt"></i> 清除缓存
+            </button>
+            <button class="floating-menu-item" id="menu-show-stats">
+                <i class="fas fa-chart-bar"></i> 系统统计
+            </button>
+            <button class="floating-menu-item" id="menu-edit-mode">
+                <i class="fas fa-edit"></i> 编辑模式
+            </button>
+            <button class="floating-menu-item" id="menu-batch-delete">
+                <i class="fas fa-trash"></i> 批量删除
+            </button>
+            <button class="floating-menu-item" id="menu-show-greeting">
+                <i class="fas fa-comment-alt"></i> 显示问候
+            </button>
+        </div>
+    </div>
+
+    <!-- 综合搜索(SearXNG)结果浮层 -->
+    <div class="search-overlay" id="search-overlay" style="display:none;">
+        <div class="search-overlay-box">
+            <div class="search-overlay-header">
+                <span class="search-overlay-title" id="search-overlay-title">综合搜索结果</span>
+                <div class="search-overlay-actions">
+                    <a id="search-overlay-instance" href="#" target="_blank" rel="noopener" class="search-overlay-instance">在 SearXNG 打开 ↗</a>
+                    <button id="search-overlay-close" class="search-overlay-close" title="关闭"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="search-overlay-body" id="search-overlay-body"></div>
+        </div>
+    </div>
+
+    <!-- ==================== JavaScript文件 ==================== -->
+    <!-- 链接数据文件 -->
+    <script src="js/list.js"></script>
+
+    <!-- 后端 API 客户端（有后端时启用，无后端自动回退 localStorage） -->
+    <script src="js/api.js"></script>
+
+    <!-- 主逻辑脚本文件 -->
+    <script src="js/script.js"></script>
+</body>
+</html>
