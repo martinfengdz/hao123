@@ -44,7 +44,7 @@
         <header class="app-bar">
             <div class="app-bar-left">
                 <div class="app-logo"><img src="/assets/logo-default.png" alt="logo"></div>
-                <div class="app-title">奇易智能导航<span class="app-version">V3.1.2</span></div>
+                <div class="app-title">奇易智能导航<span class="app-version">V3.1.3</span></div>
             </div>
             <div class="app-bar-right">
                 <a href="/" class="btn btn-ghost btn-icon" target="_blank" title="查看前台"><i class="fas fa-external-link-alt"></i></a>
@@ -97,6 +97,7 @@
                             <button id="admin-settings" class="btn btn-ghost"><i class="fas fa-plug"></i> 设置</button>
                             <button id="admin-appearance" class="btn btn-ghost" title="页眉/页脚自定义代码（前后台通用）、问候语"><i class="fas fa-palette"></i> 外观</button>
                             <button id="admin-refresh-favicons" class="btn btn-ghost" title="重新抓取全部站点图标（图标异常或不显示时可用，已自动缓存）"><i class="fas fa-sync-alt"></i> 刷新图标</button>
+                            <button id="admin-icon-check" class="btn btn-ghost" title="检查全部链接图标的获取情况，列出未获得的域名与成功率"><i class="fas fa-tasks"></i> 图标自检</button>
                             <button id="admin-reset" class="btn btn-ghost btn-danger-ghost"><i class="fas fa-undo"></i> 重置</button>
                         </div>
                         <input type="file" id="admin-import-file" accept="application/json,.json" hidden>
@@ -363,6 +364,32 @@
             </div>
             <input type="text" class="icon-search" id="icon-pick-search" placeholder="搜索图标名称…">
             <div class="icon-grid icon-pick-grid" id="icon-pick-grid"></div>
+        </div>
+    </div>
+
+    <!-- 图标自检报告模态 -->
+    <div class="modal" id="icon-check-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-tasks"></i> 图标自检</h3>
+                <button class="modal-close" id="icon-check-modal-close" type="button"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="icon-check-summary">
+                <div class="icon-check-stat"><span class="num" id="ic-total">–</span><span class="lbl">域名总数</span></div>
+                <div class="icon-check-stat"><span class="num ok" id="ic-ok">–</span><span class="lbl">已获得</span></div>
+                <div class="icon-check-stat"><span class="num miss" id="ic-missing">–</span><span class="lbl">未获得</span></div>
+                <div class="icon-check-stat"><span class="num" id="ic-rate">–</span><span class="lbl">成功率</span></div>
+            </div>
+            <div class="icon-check-tools">
+                <label class="form-label form-switch"><input type="checkbox" id="ic-deep"> 深度检测（在线尝试获取未缓存的图标）</label>
+                <button id="ic-run" class="btn btn-primary btn-small"><i class="fas fa-play"></i> 开始自检</button>
+            </div>
+            <div class="icon-check-list" id="icon-check-list">
+                <p class="icon-check-empty">点击「开始自检」查看图标获取情况</p>
+            </div>
+            <div class="icon-check-actions">
+                <button id="ic-refresh-missing" class="btn btn-ghost btn-small" title="对全部域名重新抓取一次（含未获得的）"><i class="fas fa-sync-alt"></i> 重抓未获得图标</button>
+            </div>
         </div>
     </div>
 
