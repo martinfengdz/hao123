@@ -1,0 +1,7 @@
+# 强制文本文件使用 LF，避免 Windows 自动 CRLF 反复破坏：
+#  - PNG 图标签名(含 0x0D)被 CRLF->LF 剥字节而损坏
+#  - fnOS manifest/config/wizard/dockerfile INI/YAML 解析对 CRLF 敏感
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
