@@ -1,0 +1,30 @@
+# SearXNG 配置文件（奇易导航综合版）
+# 文档: https://docs.searxng.org/admin/settings/settings.html
+# 说明: 本配置开启 JSON 输出格式（供导航站后端代理调用），并关闭访问频率限制，适合个人/家庭使用。
+
+use_default_settings: true
+
+search:
+  # 允许的输出格式：html 为网页界面，json 供导航站 /api/search 代理使用
+  formats:
+    - html
+    - json
+
+server:
+  # 监听地址（容器内固定）
+  bind_address: "0.0.0.0"
+  port: 8080
+  method: "uwsgi"
+  # 允许的外部访问（* 表示不限制主机名，家庭/内网部署可用；公网暴露建议改为你的域名）
+  external_url: false
+
+# 关闭频率限制（limiter），避免个人高频搜索被自身限流
+limiter: false
+
+# 密钥：用于会话/签名。个人部署可固定，生产环境请改为随机长字符串
+secret_key: "qiyi-nav-searxng-2026-change-me-please"
+
+# 结果默认语言/地区（可选）
+# ui:
+#   default_locale: "zh"
+#   search_on_category_select: true
