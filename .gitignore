@@ -1,0 +1,31 @@
+# 依赖（本项目零依赖，无需 node_modules）
+node_modules/
+
+# 日志
+*.log
+npm-debug.log
+
+# 环境变量（真实密码不要入库，只留 .env.example）
+.env
+
+# 运行时数据：链接与配置是用户私有数据，不入库
+data/links.json
+data/config.json
+
+# 测试/构建临时产物
+default-seed.json
+cj*.txt
+
+# FPK 打包产物与官方 fnpack 二进制（构建产物单独交付，不入库）
+*.fpk
+fnpack.exe
+fnpack
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 编辑器
+.idea/
+.vscode/
+*.swp
