@@ -11,6 +11,13 @@
     };
     var CAT_KEYS = Object.keys(CAT_NAMES);
 
+    // HTML 转义（后台页独立加载，不复用 script.js 的 escapeHtml）
+    function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+    }
+
     // 标准图标候选（全量常用 Font Awesome 实心图标，避免手填 class；弹层内可搜索）
     var ICON_CHOICES = [
         // 通用 / 界面
@@ -101,7 +108,7 @@
         '  <div class="footer-status">',
         '    <span id="system-status"><i class="fas fa-circle status-online"></i> 系统正常</span>',
         '    <span class="footer-separator">|</span>',
-        '    <span>版本: <span class="version">V3.1.2</span></span>',
+        '    <span>版本: <span class="version">V3.1.3</span></span>',
         '    <span class="footer-separator">|</span>',
         '    <span>© <span id="current-year-footer"></span> 奇易智能导航</span>',
         '    <span class="footer-separator">|</span>',
@@ -767,6 +774,81 @@
             });
         });
 
+        // 图标自检（扫描全部链接图标的获取情况）
+        $('admin-icon-check').addEventListener('click', function () {
+            $('icon-check-modal').style.display = 'flex';
+            runIconCheck();
+        });
+        function runIconCheck() {
+            var deep = $('ic-deep').checked;
+            var btn = $('ic-run');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 检测中...';
+            Api.iconCheck(deep).then(function (r) {
+                if (r.status === 200 && r.data) {
+                    renderIconCheck(r.data);
+                } else if (r.status === 401) {
+                    notify('登录已失效，请重新登录', 'error');
+                } else {
+                    notify('图标自检失败：' + ((r.data && r.data.error) || r.status), 'error');
+                }
+            }).catch(function () {
+                notify('图标自检请求失败，请稍后重试', 'error');
+            }).finally(function () {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> 开始自检';
+            });
+        }
+        function renderIconCheck(data) {
+            $('ic-total').textContent = data.total;
+            $('ic-ok').textContent = data.ok;
+            $('ic-missing').textContent = data.missing;
+            $('ic-rate').textContent = data.rate + '%';
+            var list = $('icon-check-list');
+            var missing = (data.domains || []).filter(function (d) { return !d.cached; });
+            if (!missing.length) {
+                list.innerHTML = '<p class="icon-check-ok"><i class="fas fa-check-circle"></i> 全部图标已获得 🎉</p>';
+                return;
+            }
+            var rows = missing.map(function (d) {
+                var names = (d.names && d.names.length) ? d.names.map(function (n) { return escapeHtml(n); }).join('、') : '';
+                return '<div class="icon-row">' +
+                    '<span class="icon-domain">' + escapeHtml(d.domain) + '</span>' +
+                    '<span class="icon-meta">链接 ' + d.count + ' · ' + (d.obtainable ? '可在线获取（待缓存）' : '暂无法获取') + '</span>' +
+                    (names ? '<span class="icon-names" title="' + escapeHtml(names) + '">' + escapeHtml(names) + '</span>' : '') +
+                    '</div>';
+            }).join('');
+            list.innerHTML = '<div class="icon-list-head">未获得图标的域名（' + missing.length + '）</div>' + rows;
+        }
+        $('ic-run').addEventListener('click', runIconCheck);
+        $('ic-refresh-missing').addEventListener('click', function () {
+            var btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 重抓中...';
+            Api.refreshFavicons().then(function (r) {
+                if (r.status === 200) {
+                    notify('已在后台重抓全部图标，稍后重新自检即可看到结果', 'success');
+                    setTimeout(function () { if ($('icon-check-modal').style.display === 'flex') runIconCheck(); }, 1800);
+                } else if (r.status === 401) {
+                    notify('登录已失效，请重新登录', 'error');
+                } else {
+                    notify('重抓请求失败', 'error');
+                }
+            }).catch(function () {
+                notify('重抓请求失败，请稍后重试', 'error');
+            }).finally(function () {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> 重抓未获得图标';
+            });
+        });
+        // 关闭图标自检模态
+        $('icon-check-modal-close').addEventListener('click', function () {
+            $('icon-check-modal').style.display = 'none';
+        });
+        $('icon-check-modal').addEventListener('click', function (e) {
+            if (e.target === this) this.style.display = 'none';
+        });
+
         // 通知关闭
         $('admin-notification-close').addEventListener('click', function () {
             $('admin-notification').className = 'notification';
@@ -818,7 +900,7 @@
             });
         }
 
-        // ---- 站点外观：页脚功能链接编辑器已取消（V3.1.2 起由「整页页脚 HTML」接管整个页脚） ----
+        // ---- 站点外观：页脚功能链接编辑器已取消（V3.1.3 起由「整页页脚 HTML」接管整个页脚） ----
 
         // 左侧：添加快捷访问
         $('nav-add-quick').addEventListener('click', function () {
