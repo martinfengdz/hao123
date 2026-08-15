@@ -1,0 +1,22 @@
+services:
+  qiyi-nav:
+    # 飞牛本地离线构建（源码已内置进 FPK 的 app/build，无需 GitHub/GHCR）
+    build:
+      context: ../build
+      dockerfile: Dockerfile
+    # 本地构建出的镜像名（不依赖任何外部镜像仓库，避免 invalid reference 报错）
+    image: qiyi-nav:3.1.2
+    # 如需改用 GHCR 在线镜像：删掉上面 build 段，并取消下一行注释（<用户名> 必须全小写）
+    # image: ghcr.io/<你的GitHub用户名>/qiyi-nav:3.1.2
+    container_name: qiyi-nav
+    restart: unless-stopped
+    ports:
+      # 容器与宿主统一使用 1315，飞牛不会再多发布一个 8080 端口
+      - "1315:1315"
+    volumes:
+      - "/var/apps/qiyi-nav/shares/qiyi-nav/data:/app/data"
+    environment:
+      # 以下均写死，不依赖 fnOS 向导环境变量注入（实测不会被注入）
+      - PORT=1315
+      - ADMIN_PASSWORD=admin
+      - SESSION_SECRET=qiyi-nav-fixed-secret
