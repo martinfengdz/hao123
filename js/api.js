@@ -58,6 +58,8 @@
     faviconUrl: function (url) { return '/api/favicon?url=' + encodeURIComponent(url); },
     // 强制刷新全部站点图标缓存（后台"刷新图标"按钮）
     refreshFavicons: function () { return req('POST', '/api/favicons/refresh'); },
+    // 图标自检报告（后台"图标自检"按钮）：?deep=1 在线探测可获取性
+    iconCheck: function (deep) { return req('GET', '/api/icon-check' + (deep ? '?deep=1' : '')); },
     // 抓取网页标题与图标（后台"自动获取"）
     fetchMeta: function (url) { return req('GET', '/api/meta?url=' + encodeURIComponent(url)); },
     // 导入浏览器书签 HTML（合并去重）
