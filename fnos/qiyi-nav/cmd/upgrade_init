@@ -1,5 +1,14 @@
 #!/bin/bash
 
-### This script is called by fnOS appcenter.
-
+### 飞牛升级前自动备份数据，防止升级异常导致数据丢失
+DATA_DIR="/var/apps/qiyi-nav/shares/qiyi-nav/data"
+BK_DIR="/var/apps/qiyi-nav/shares/qiyi-nav/backups"
+mkdir -p "$BK_DIR"
+if [ -d "$DATA_DIR" ]; then
+  TS=$(date +%Y%m%d-%H%M%S)
+  tar -czf "$BK_DIR/qiyi-nav-data-$TS.tar.gz" -C "$(dirname "$DATA_DIR")" "$(basename "$DATA_DIR")" 2>/dev/null
+  # 仅保留最近 7 份，避免无限增长
+  ls -1t "$BK_DIR"/qiyi-nav-data-*.tar.gz 2>/dev/null | tail -n +8 | xargs -r rm -f
+  echo "升级前已备份数据到 $BK_DIR/qiyi-nav-data-$TS.tar.gz"
+fi
 exit 0
