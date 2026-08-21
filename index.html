@@ -13,7 +13,7 @@
     <title>奇易智能导航系统</title>
 
     <!-- 外部样式表 -->
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=3.3.01">
 
     <!-- Font Awesome图标库，用于界面图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -22,49 +22,63 @@
     <link id="site-favicon" rel="icon" href="/assets/logo-default.png">
 </head>
 <body>
+    <!-- 首页进入「开幕动态」遮罩（后台「外观」可开关；脚本加载完成后淡出移除） -->
+    <div id="splash" class="splash" aria-hidden="true">
+        <div class="splash-inner">
+            <img src="/assets/logo-default.png" alt="" class="splash-logo">
+            <div class="splash-title">奇易智能导航</div>
+            <div class="splash-sub">正在进入，请稍候…</div>
+            <div class="splash-bar"><i></i></div>
+        </div>
+    </div>
+
+    <!-- 鼠标动态粒子连线背景（前台首页），非交互浮层，置于内容之上、控件之下 -->
+    <canvas id="bg-particles"></canvas>
+
     <!-- 主容器：包裹所有页面内容 -->
     <div class="container">
         <!-- 头部区域：LOGO / 时间 / 搜索功能 -->
         <div class="header">
             <!-- 页眉自定义代码挂载点（后台「外观」注入，前后台通用） -->
             <div id="custom-header"></div>
-            <!-- 主区：LOGO + 两个日期 居左成组，问候语居中，工具按钮推到最右 -->
+            <!-- 页首（V3.3.01）：横向 3 列 — 左 LOGO+日期·农历·版权（日期含周X，3 行竖排）/ 中 天气（问候浮层居中盖其上，30s 后露天气）/ 右 三按钮横排居中 -->
             <div class="header-main">
-                <div class="header-brand">
-                    <!-- 前台 LOGO：后台「LOGO 设计」可自定义上传；默认走 /assets/logo-default.png
-                         位置：两个日期（公历 #current-time / 农历 #lunar-date）左边，同排不占整行 -->
+                <!-- 左列：LOGO + 日期三行竖排（日期[含周X] / 农历 / 版权·无痕） -->
+                <div class="col-left">
+                    <!-- LOGO：垂直铺满左列高度 -->
                     <div class="site-logo" id="site-logo-wrap">
                         <img id="site-logo" src="/assets/logo-default.png" alt="logo">
                     </div>
-                    <!-- 时间显示区域（两个日期） -->
-                    <div class="time-display">
-                        <div id="current-time">正在加载时间...</div>
-                        <div id="lunar-date">正在加载农历日期...</div>
-                        <div>© <span id="current-year"></span> 奇易智能导航 <span class="incognito-badge">🔒 无痕</span></div>
+                    <!-- 日期三行竖排：日期[含周X] / 农历 / 版权·无痕 -->
+                    <div class="date-stack">
+                        <div id="current-time">2026-08-20 20:28:15 周四</div>
+                        <div id="lunar-date">丙午年 马年 七月初八</div>
+                        <div class="brand-copy">© <span id="current-year"></span> 奇易智能导航 <span class="incognito-badge">🔒 无痕</span></div>
                     </div>
-                </div><!-- /header-brand -->
-
-                <!-- 问候语区域 -->
-                <div class="greeting-container" id="greeting-container">
-                    <span id="greeting-text"></span>
-                    <button id="close-greeting" class="btn-close-greeting" title="关闭问候语">
-                        <i class="fas fa-times"></i>
-                    </button>
                 </div>
 
-                <!-- 头部工具按钮 -->
-                <div class="header-tools">
-                    <!-- 主题切换按钮 -->
+                <!-- 中列：天气组件（问候浮层居中盖其上，30s 自动关闭后天气露出来） -->
+                <div class="col-center">
+                    <!-- 问候浮层：加载 0.5s 后弹性滑入（渐变色），底部 30 秒倒计时进度条，可手动 ✕ 关闭 -->
+                    <div class="greeting-container" id="greeting-container">
+                        <span id="greeting-text"></span>
+                        <button id="close-greeting" class="btn-close-greeting" title="关闭问候语">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <span class="greeting-progress" id="greeting-progress"></span>
+                    </div>
+                    <!-- 页首天气区（内置 wttr.in 组件 或 后台填写的自定义嵌入代码） -->
+                    <div class="weather-area" id="weather-area" style="display:none;"></div>
+                </div>
+
+                <!-- 右列：主题 / 主页 / 刷新 三按钮横排居中 -->
+                <div class="col-right">
                     <button id="toggle-theme" class="btn btn-warning" title="切换亮/暗主题">
                         <i class="fas fa-moon"></i> 主题
                     </button>
-
-                    <!-- 设为主页按钮 -->
                     <button id="set-homepage" class="btn btn-success" title="设为主页">
                         <i class="fas fa-home"></i> 主页
                     </button>
-
-                    <!-- 刷新页面按钮 -->
                     <button id="refresh-page" class="btn btn-secondary" title="刷新页面">
                         <i class="fas fa-sync-alt"></i> 刷新
                     </button>
@@ -146,11 +160,7 @@
 
                 <!-- 链接列表底部：添加链接按钮和分页控件 -->
                 <div class="links-footer">
-                    <!-- 添加链接按钮（需要管理权限） -->
-                    <button class="btn add-link-btn" id="add-link-btn-bottom" data-tab="recommended">
-                        <i class="fas fa-plus"></i> 添加网址
-                    </button>
-                    <!-- 分页控件 -->
+                <!-- 分页控件 -->
                     <div class="links-pagination">
                         <button class="btn-pagination" id="prev-page" disabled>
                             <i class="fas fa-chevron-left"></i>
@@ -170,7 +180,7 @@
             <div class="quick-access-links" id="quick-access-links"></div>
         </div>
 
-        <!-- 页脚区域：整段由「外观」footerHtml 接管（V3.1.3 起）；以下为兜底静态内容 -->
+        <!-- 页脚区域：整段由「外观」footerHtml 接管（V3.1.6 起）；以下为兜底静态内容 -->
         <footer id="site-footer">
             <div class="footer-sections">
                 <!-- 功能链接区域（footerHtml 为空时由后台「外观」动态渲染） -->
@@ -182,7 +192,7 @@
                 <div class="footer-status">
                     <span id="system-status"><i class="fas fa-circle status-online"></i> 系统正常</span>
                     <span class="footer-separator">|</span>
-                    <span>版本: <span class="version">V3.1.3</span></span>
+                    <span>版本: <span class="version">V3.3.01</span></span>
                     <span class="footer-separator">|</span>
                     <span>© <span id="current-year-footer"></span> 奇易智能导航</span>
                     <span class="footer-separator">|</span>
@@ -271,7 +281,7 @@
         </div>
     </div>
 
-    <!-- 权限验证模态框 -->
+    <!-- 权限验证模态框（桌面登录窗口） -->
     <div class="modal" id="permission-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -282,20 +292,54 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="form-group">
-                <label for="permission-password" class="form-label">请输入管理密码</label>
-                <input type="password" id="permission-password" class="form-input" 
-                       placeholder="输入密码" required>
-                <div class="form-hint">默认密码: admin（首次使用后请修改）</div>
+
+            <!-- 登录区 -->
+            <div id="perm-login-area">
+                <div class="form-group">
+                    <label for="permission-password" class="form-label">请输入管理密码</label>
+                    <input type="password" id="permission-password" class="form-input" 
+                           placeholder="输入密码" required>
+                    <div class="form-hint">默认密码: admin（首次使用后请修改）</div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-permission">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                    <button type="button" class="btn btn-success" id="confirm-permission">
+                        <i class="fas fa-check"></i> 验证
+                    </button>
+                </div>
+                <p style="text-align:center;margin:10px 0 0;">
+                    <a href="#" id="perm-forgot-link" style="color:#16a34a;text-decoration:underline;">忘记密码？</a>
+                </p>
             </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" id="cancel-permission">
-                    <i class="fas fa-times"></i> 取消
-                </button>
-                <button type="button" class="btn btn-success" id="confirm-permission">
-                    <i class="fas fa-check"></i> 验证
-                </button>
-            </div>
+
+            <!-- 忘记密码面板 -->
+            <form id="perm-reset-form" style="display:none;">
+                <div class="form-group">
+                    <label for="perm-reset-token" class="form-label">重置令牌</label>
+                    <input type="text" id="perm-reset-token" class="form-input" 
+                           placeholder="运维设置的重置令牌（环境变量 QY_RESET_TOKEN 或数据卷 reset-token.txt）" required>
+                    <div class="form-hint">不记得旧密码时用此令牌重置</div>
+                </div>
+                <div class="form-group">
+                    <label for="perm-reset-new" class="form-label">新密码（至少 6 位）</label>
+                    <input type="password" id="perm-reset-new" class="form-input" placeholder="设置新管理密码" required>
+                </div>
+                <div class="form-group">
+                    <label for="perm-reset-confirm" class="form-label">确认新密码</label>
+                    <input type="password" id="perm-reset-confirm" class="form-input" placeholder="再次输入新密码" required>
+                </div>
+                <div id="perm-reset-error" style="color:#d32f2f;font-size:13px;margin:4px 0 8px;"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-ghost" id="perm-reset-cancel">
+                        <i class="fas fa-times"></i> 返回
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-redo"></i> 重置密码
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -309,9 +353,6 @@
 
     <!-- 浮动按钮组件：固定在右下角的快捷操作按钮 -->
     <div class="floating-buttons">
-        <button class="floating-btn" id="floating-add" title="快速添加">
-            <i class="fas fa-plus"></i>
-        </button>
         <button class="floating-btn" id="floating-menu" title="更多功能">
             <i class="fas fa-bars"></i>
         </button>
@@ -368,13 +409,17 @@
     </div>
 
     <!-- ==================== JavaScript文件 ==================== -->
+    <!-- 鼠标动态粒子连线背景（须先于页面脚本，依赖 #bg-particles 已存在） -->
+    <!-- 动态背景统一引擎（粒子/光晕/极光，由后台「外观」选择；须先于页面脚本，依赖 #bg-particles 已存在） -->
+    <script src="js/background.js?v=3.3.01"></script>
+
     <!-- 链接数据文件 -->
-    <script src="js/list.js"></script>
+    <script src="js/list.js?v=3.3.01"></script>
 
     <!-- 后端 API 客户端（有后端时启用，无后端自动回退 localStorage） -->
-    <script src="js/api.js"></script>
+    <script src="js/api.js?v=3.3.01"></script>
 
     <!-- 主逻辑脚本文件 -->
-    <script src="js/script.js"></script>
+    <script src="js/script.js?v=3.3.01"></script>
 </body>
 </html>
