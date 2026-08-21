@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>奇易导航 · 后台管理</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/style.css?v=3.3.01">
+    <link rel="stylesheet" href="css/admin.css?v=3.3.01">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔗</text></svg>">
 </head>
 <body>
+
+    <!-- 动态背景画布（由 js/background.js 按后台「外观」设置驱动） -->
+    <canvas id="bg-particles"></canvas>
 
     <!-- ============ 登录视图 ============ -->
     <section id="login-view" class="login-view">
@@ -44,14 +47,23 @@
         <header class="app-bar">
             <div class="app-bar-left">
                 <div class="app-logo"><img src="/assets/logo-default.png" alt="logo"></div>
-                <div class="app-title">奇易智能导航<span class="app-version">V3.1.3</span></div>
+                <div class="app-title">奇易智能导航<span class="app-version" id="app-version"></span></div>
             </div>
             <div class="app-bar-right">
                 <a href="/" class="btn btn-ghost btn-icon" target="_blank" title="查看前台"><i class="fas fa-external-link-alt"></i></a>
                 <button id="admin-theme" class="btn btn-ghost btn-icon" title="切换主题"><i class="fas fa-moon"></i></button>
                 <button id="admin-logout" class="btn btn-ghost" title="退出登录"><i class="fas fa-sign-out-alt"></i> 退出</button>
+                <button id="admin-check-update" class="btn btn-ghost" title="检查新版本"><i class="fas fa-sync-alt"></i> 检查更新</button>
             </div>
         </header>
+
+        <!-- 更新提示横幅（默认隐藏，发现新版本时显示） -->
+        <div id="update-banner" class="update-banner" style="display:none;">
+            <i class="fas fa-arrow-up"></i>
+            <span id="update-banner-text">发现新版本</span>
+            <a id="update-banner-link" href="#" target="_blank" class="update-banner-link">前往更新</a>
+            <button id="update-banner-close" class="update-banner-close" title="忽略"><i class="fas fa-times"></i></button>
+        </div>
 
         <div class="dash-grid">
             <!-- 左侧分类侧边栏 -->
@@ -69,18 +81,36 @@
                 <ul class="sidebar-nav" id="sidebar-nav">
                     <li class="sidebar-nav-item" data-nav="tabs"><i class="fas fa-bars"></i> 主标签页导航</li>
                     <li class="sidebar-nav-item" data-nav="quick"><i class="fas fa-bolt"></i> 底部快捷访问</li>
+                    <li class="sidebar-nav-item" data-nav="pages"><i class="fas fa-file-code"></i> 自建页面</li>
+                    <li class="sidebar-nav-item" data-nav="help"><i class="fas fa-question-circle"></i> 帮助说明</li>
                 </ul>
             </aside>
 
-            <!-- 主内容 -->
+            <!-- 主内容：动态窗 -->
             <main class="content">
+                <!-- 动态窗固定头部：统计概览 + 全局工具条（各视图共用） -->
+                <div class="dynamic-header">
+                    <div class="stats-grid" id="stat-cards"></div>
+                    <div class="toolbar toolbar-config">
+                        <div class="toolbar-actions">
+                            <button id="admin-password" class="btn btn-ghost"><i class="fas fa-key"></i> 改密码</button>
+                            <button id="admin-settings" class="btn btn-ghost"><i class="fas fa-plug"></i> 设置</button>
+                            <button id="admin-appearance" class="btn btn-ghost" title="页眉/页脚自定义代码（前后台通用）、问候语"><i class="fas fa-palette"></i> 外观</button>
+                            <button id="admin-refresh-favicons" class="btn btn-ghost" title="重新抓取全部站点图标（图标异常或不显示时可用，已自动缓存）"><i class="fas fa-sync-alt"></i> 刷新图标</button>
+                            <button id="admin-icon-check" class="btn btn-ghost" title="检查全部链接图标的获取情况，列出未获得的域名与成功率"><i class="fas fa-tasks"></i> 图标自检</button>
+                            <button id="admin-reset" class="btn btn-ghost btn-danger-ghost" title="将所有链接重置为系统默认数据（需连续点击两次确认）"><span class="btn-text"><i class="fas fa-undo"></i> 重置</span></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 动态窗滚动内容区：仅此区域随内容滚动，右上固定头部不随之移动，从结构上杜绝重叠 -->
+                <div class="content-scroll">
+
                 <!-- 网址管理视图（左导分类 → 右表格） -->
                 <div id="links-view" class="admin-view">
-                <!-- 统计概览 -->
-                <div class="stats-grid" id="stat-cards"></div>
 
-                <!-- 工具条 -->
-                <div class="toolbar">
+                <!-- 链接操作栏（仅链接视图） -->
+                <div class="links-actions">
                     <div class="toolbar-search">
                         <i class="fas fa-search"></i>
                         <input type="text" id="admin-search" class="search-links-input" placeholder="搜索网址名称或地址...">
@@ -92,19 +122,13 @@
                             <button id="admin-import-html" class="btn btn-secondary" title="从浏览器导出的收藏夹 HTML 导入"><i class="fas fa-bookmark"></i> 导入书签</button>
                             <button id="admin-export" class="btn btn-secondary"><i class="fas fa-download"></i> 导出</button>
                         </div>
-                        <div class="btn-group">
-                            <button id="admin-password" class="btn btn-ghost"><i class="fas fa-key"></i> 改密码</button>
-                            <button id="admin-settings" class="btn btn-ghost"><i class="fas fa-plug"></i> 设置</button>
-                            <button id="admin-appearance" class="btn btn-ghost" title="页眉/页脚自定义代码（前后台通用）、问候语"><i class="fas fa-palette"></i> 外观</button>
-                            <button id="admin-refresh-favicons" class="btn btn-ghost" title="重新抓取全部站点图标（图标异常或不显示时可用，已自动缓存）"><i class="fas fa-sync-alt"></i> 刷新图标</button>
-                            <button id="admin-icon-check" class="btn btn-ghost" title="检查全部链接图标的获取情况，列出未获得的域名与成功率"><i class="fas fa-tasks"></i> 图标自检</button>
-                            <button id="admin-reset" class="btn btn-ghost btn-danger-ghost"><i class="fas fa-undo"></i> 重置</button>
-                        </div>
                         <input type="file" id="admin-import-file" accept="application/json,.json" hidden>
                         <input type="file" id="admin-import-html-file" accept=".html,text/html" hidden>
                     </div>
                 </div>
 
+                <!-- 子面板：网址分类网址列表 -->
+                <div id="ltab-cat" class="ltab-panel">
                 <!-- 表格卡片 -->
                 <div class="table-card">
                     <div class="table-card-head">
@@ -118,6 +142,8 @@
                                     <th class="col-select"></th>
                                     <th class="col-name">名称</th>
                                     <th class="col-url">地址</th>
+                                    <th class="col-user">用户名</th>
+                                    <th class="col-pass">密码</th>
                                     <th class="col-cat">分类</th>
                                     <th class="col-mark">标记</th>
                                     <th class="col-act">操作</th>
@@ -152,9 +178,11 @@
                         </div>
                     </div>
                 </div>
+                </div><!-- /ltab-cat -->
+
                 </div><!-- /links-view -->
 
-                <!-- 主标签页导航编辑视图（左导分类 → 右修改窗口） -->
+                <!-- 主标签页导航视图（左侧导航设置入口，原在 links-view 内以子面板形式呈现） -->
                 <div id="nav-tabs-view" class="admin-view" style="display:none">
                     <div class="nav-panel">
                         <div class="nav-panel-head">
@@ -170,7 +198,7 @@
                     </div>
                 </div>
 
-                <!-- 底部快捷访问编辑视图（左导分类 → 右修改窗口） -->
+                <!-- 底部快捷访问视图（左侧导航设置入口，原在 links-view 内以子面板形式呈现） -->
                 <div id="nav-quick-view" class="admin-view" style="display:none">
                     <div class="nav-panel">
                         <div class="nav-panel-head">
@@ -188,6 +216,205 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 自建页面视图 -->
+                <div id="nav-pages-view" class="admin-view" style="display:none">
+                    <div class="nav-panel">
+                        <div class="nav-panel-head">
+                            <div>
+                                <h3><i class="fas fa-file-code"></i> 自建页面</h3>
+                                <p class="nav-panel-sub">上传或新建自定义 .html 网页，可直接访问（如 <code>/pages/我的页面.html</code>），并可加入前台「快捷访问」。所有页面存于数据卷，容器重建不丢。</p>
+                            </div>
+                            <div class="nav-panel-actions">
+                                <button type="button" class="btn btn-secondary btn-small" id="page-new"><i class="fas fa-plus"></i> 新建空白页</button>
+                                <button type="button" class="btn btn-secondary btn-small" id="page-upload"><i class="fas fa-upload"></i> 上传 HTML 文件</button>
+                                <button type="button" class="btn btn-success btn-small" id="page-refresh"><i class="fas fa-sync-alt"></i> 刷新</button>
+                                <input type="file" id="page-upload-file" accept=".html,text/html" hidden>
+                            </div>
+                        </div>
+                        <div class="nav-panel-body">
+                            <div id="pages-list" class="pages-list"></div>
+                            <div id="pages-empty" class="admin-empty" style="display:none;">
+                                <i class="fas fa-file-code"></i><p>还没有自建页面，点「新建空白页」或「上传 HTML 文件」开始</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ===== 数据备份 / 还原（升级/迁移前保护数据） ===== -->
+                    <div class="nav-panel backup-panel">
+                        <div class="nav-panel-head">
+                            <div>
+                                <h3><i class="fas fa-database"></i> 数据备份 / 还原</h3>
+                                <p class="nav-panel-sub">升级或迁移前务必先备份。点「下载备份」导出全部数据（配置、网址、自建页面、LOGO、图标）；「还原备份」会先自动备份当前数据再覆盖，可随时回滚。</p>
+                            </div>
+                            <div class="nav-panel-actions">
+                                <button type="button" class="btn btn-secondary btn-small" id="data-backup"><i class="fas fa-download"></i> 下载备份</button>
+                                <button type="button" class="btn btn-secondary btn-small" id="data-restore"><i class="fas fa-upload"></i> 还原备份</button>
+                                <input type="file" id="data-restore-file" accept=".zip,application/zip" hidden>
+                            </div>
+                        </div>
+                        <div class="nav-panel-body">
+                            <div id="backup-status" class="backup-status"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 帮助说明视图 -->
+                <div id="nav-help-view" class="admin-view" style="display:none">
+                    <div class="nav-panel">
+                        <div class="nav-panel-head">
+                            <div>
+                                <h3><i class="fas fa-question-circle"></i> 帮助说明 · 常见问题</h3>
+                                <p class="nav-panel-sub">后台操作常见问题与解答。忘记密码、数据备份还原、检查更新、数据存放等都在这。</p>
+                            </div>
+                        </div>
+                        <div class="nav-panel-body">
+                            <div class="help-faq">
+                                <details class="help-item" open>
+                                    <summary class="help-q"><i class="fas fa-key"></i> 忘记管理密码怎么办？</summary>
+                                    <div class="help-a">
+                                        <p>在登录窗口点「<b>忘记密码？</b>」链接（网页后台 <code>/admin.html</code> 与飞牛桌面登录窗都有），用<b>重置令牌</b>改密，无需旧密码。令牌二选一：</p>
+                                        <ul>
+                                            <li><b>方式一（环境变量）</b>：在 <code>docker-compose.yaml</code> 的 <code>environment</code> 加一行 <code>QY_RESET_TOKEN=你的令牌</code>，重启容器生效。</li>
+                                            <li><b>方式二（文件令牌）</b>：往数据卷写文件，容器内路径 <code>/app/data/reset-token.txt</code>（宿主机对应 <code>/var/apps/qiyi-nav/shares/qiyi-nav/data/reset-token.txt</code>，即飞牛文件管理器里该应用 data 目录），写入令牌后重启应用。</li>
+                                        </ul>
+                                        <p>然后在登录窗点「忘记密码？」→ 填令牌 + 新密码（≥6 位）→ 提交即可。<b>文件令牌用后会自动删除</b>（用后即焚）；环境变量令牌每次启动都有效，改密后建议移除。</p>
+                                        <p class="help-tip"><i class="fas fa-info-circle"></i> 镜像是 Alpine，进容器用 <code>/bin/sh</code> 而非 <code>/bin/bash</code>。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-user-shield"></i> 默认管理密码是多少？</summary>
+                                    <div class="help-a">
+                                        <p>出厂默认密码为 <code>admin</code>。首次登录后请尽快通过工具栏「改密码」修改，避免被他人随意进入。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-sync-alt"></i> 怎么修改管理密码？</summary>
+                                    <div class="help-a">
+                                        <p>三种方式：</p>
+                                        <ul>
+                                            <li><b>已知旧密码</b>：后台工具栏「改密码」按钮，填原密码 + 新密码（≥6 位）即可。</li>
+                                            <li><b>已知旧密码·一键改</b>：<code>docker-compose.yaml</code> 的 <code>environment</code> 加 <code>QY_RESET_PASSWORD=新密码</code>，重启生效（需先停旧容器，否则旧哈希被信任会覆盖）。</li>
+                                            <li><b>忘记旧密码</b>：见上方「忘记管理密码怎么办？」，用重置令牌改密。</li>
+                                        </ul>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-database"></i> 升级 / 迁移前怎么备份数据？</summary>
+                                    <div class="help-a">
+                                        <p>进入后台 →「自建页面」视图（左侧导航设置）→ 底部「<b>数据备份 / 还原</b>」面板：</p>
+                                        <ul>
+                                            <li><b>下载备份</b>：导出全部数据（配置、网址、自建页面、LOGO、图标）为一个 zip。</li>
+                                            <li><b>还原备份</b>：先自动备份当前数据再覆盖，可随时回滚。</li>
+                                        </ul>
+                                        <p class="help-tip"><i class="fas fa-info-circle"></i> 升级或迁移前务必先「下载备份」，防止意外。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-sync"></i> 怎样检查 / 更新新版本？</summary>
+                                    <div class="help-a">
+                                        <p>后台顶部「<b>检查更新</b>」按钮可拉取 GitHub 最新版本。若发现新版本，页面顶部会出现横幅，点「前往更新」跳转下载最新 <code>.fpk</code>，再到飞牛应用中心手动安装升级。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-hdd"></i> 数据存在哪里？容器重建 / 升级会丢吗？</summary>
+                                    <div class="help-a">
+                                        <p>所有数据都在<b>数据卷</b>：宿主机 <code>/var/apps/qiyi-nav/shares/qiyi-nav/data</code> ↔ 容器内 <code>/app/data</code>。网址、配置、自建页面、LOGO、图标都存这里，<b>容器重建、升级都不会丢</b>。飞牛升级时会保留旧数据卷（旧密码哈希因此被信任）。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-exclamation-triangle"></i> 升级后密码不对 / 配置没生效？</summary>
+                                    <div class="help-a">
+                                        <p>这是数据保护的正常现象：飞牛升级保留旧数据卷 <code>config.json</code>（含旧密码哈希），若你之前改过密码，默认 <code>admin</code> 就会失效。解决：用「忘记密码」流程或 <code>QY_RESET_PASSWORD</code> 环境变量重置即可。</p>
+                                        <p>若要从零开始，在飞牛应用中心<b>卸载并勾选「清除应用数据」</b>，重装即为全新状态。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-image"></i> 图标不显示 / 异常？</summary>
+                                    <div class="help-a">
+                                        <p>工具栏提供：</p>
+                                        <ul>
+                                            <li><b>刷新图标</b>：重新抓取全部站点图标（已自动缓存）。</li>
+                                            <li><b>图标自检</b>：查看获取成功率与未获得域名列表。</li>
+                                            <li><b>重抓未获得图标</b>：对未成功的域名再抓一次。</li>
+                                        </ul>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-palette"></i> 怎么自定义 LOGO / 页眉页脚 / 问候语？</summary>
+                                    <div class="help-a">
+                                        <p>后台「<b>外观</b>」按钮：</p>
+                                        <ul>
+                                            <li><b>LOGO</b>：前台 / 后台可分别上传不同图，留空用出厂默认。</li>
+                                            <li><b>页眉 / 页脚</b>：自定义 HTML；页脚可整段替换。</li>
+                                            <li><b>全站 CSS</b>：写任意 CSS 微调样式。</li>
+                                            <li><b>问候语</b>：分时段自动问候或自定义单一文案。</li>
+                                        </ul>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-search"></i> 怎么设置默认搜索引擎 / 天气区 / 开幕动画？</summary>
+                                    <div class="help-a">
+                                        <p>后台「<b>外观</b>」→「首页行为」区块：</p>
+                                        <ul>
+                                            <li><b>默认搜索引擎</b>：百度（出厂默认）/ 必应 / 谷歌 / 360 / 综合(SearXNG)，首页进入自动预选，仍可手动切换。</li>
+                                            <li><b>开幕动画</b>：开关首页进入时的启动遮罩（LOGO + 加载条淡出）；系统开启「减少动态效果」时自动跳过。</li>
+                                            <li><b>天气</b>：出厂默认启用<b>内置天气组件</b>（实时温度 + 城市 + 风力湿度 + 3 天预报，数据源 wttr.in 免密钥），在「天气城市」填城市名（默认广州）即可；也可在「页首天气区代码」粘贴自定义 iframe 天气卡片（和风天气 / 心知天气 / 中国天气网等）优先使用。script 类代码请放进「页眉 HTML」。</li>
+                                        </ul>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-key"></i> 网址的「用户名 / 密码」和免密登录怎么用？</summary>
+                                    <div class="help-a">
+                                        <p>在后台「网址分类」表格里，点某行「编辑」，在<b>用户名 / 密码</b>列填写该网站的登录账号密码（可空），保存后前台该链接卡片右下角会出现 <i class="fas fa-key"></i> 钥匙按钮：</p>
+                                        <ul>
+                                            <li><b>免密直达</b>：把账号密码拼进网址（<code>http(s)://用户:密码@主机/</code>）自动登录，适合路由器、NAS、监控等支持 HTTP Basic 认证的设备。</li>
+                                            <li><b>打开站点</b>：普通打开；网页表单类登录站可在浏览器中保存密码后自动填充（<code>Ctrl+Shift+L</code> 唤起）。</li>
+                                            <li>凭据仅存于本机数据卷，页面不直接展示密码（默认打码，可点眼睛查看 / 复制）。</li>
+                                        </ul>
+                                        <p class="help-tip"><i class="fas fa-info-circle"></i> 前台链接接口不返回密码明文（仅返回「已设置」标记），免密登录页按需单条拉取，适合个人 / 局域网信任环境使用。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-search"></i> SearXNG 综合搜索怎么配置？</summary>
+                                    <div class="help-a">
+                                        <p>后台「<b>设置</b>」→ 启用 SearXNG 综合搜索，填实例地址：Docker 综合版默认 <code>http://searxng:8080</code>；独立部署时填实际地址（如 <code>http://192.168.1.10:8081</code> 或公网 https）。可设为版头默认引擎、结果新标签打开。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-file-code"></i> 自建页面怎么用？</summary>
+                                    <div class="help-a">
+                                        <p>后台「<b>自建页面</b>」：新建空白页或上传 HTML 文件，访问地址为 <code>/pages/文件名.html</code>（如 <code>/pages/我的笔记.html</code>），并可加入前台「快捷访问」。页面存于数据卷，容器重建不丢。</p>
+                                    </div>
+                                </details>
+
+                                <details class="help-item">
+                                    <summary class="help-q"><i class="fas fa-network-wired"></i> 访问地址和端口是多少？</summary>
+                                    <div class="help-a">
+                                        <p>默认服务端口 <b>1315</b>：</p>
+                                        <ul>
+                                            <li>前台首页：<code>http://&lt;设备IP&gt;:1315/</code></li>
+                                            <li>后台管理：<code>http://&lt;设备IP&gt;:1315/admin.html</code></li>
+                                        </ul>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                </div><!-- /content-scroll -->
             </main>
         </div>
     </section>
@@ -280,6 +507,57 @@
                         <label class="form-label" for="set-greeting-text">自定义文案</label>
                         <textarea id="set-greeting-text" class="form-textarea" rows="2" placeholder="例如：欢迎回到奇易导航！"></textarea>
                     </div>
+                </div>
+
+                <div class="appearance-section">
+                    <h4>动态背景（鼠标交互）</h4>
+                    <p class="form-hint">选择前台/后台的鼠标动态背景效果，保存后前台刷新即时生效；可随时切回「关闭」。</p>
+                    <div class="field-row">
+                        <label class="form-label" for="set-bg-effect">背景效果</label>
+                        <select id="set-bg-effect" class="form-select">
+                            <option value="particles">粒子连线网络（DeepSeek 风格）</option>
+                            <option value="glow">鼠标光晕跟随</option>
+                            <option value="aurora">极光渐变流动</option>
+                            <option value="none">关闭</option>
+                        </select>
+                    </div>
+                    <div class="field-row">
+                        <label class="form-label" for="set-bg-target">应用页面</label>
+                        <select id="set-bg-target" class="form-select">
+                            <option value="frontend">仅前台首页</option>
+                            <option value="backend">仅后台管理</option>
+                            <option value="both">前台 + 后台</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="appearance-section">
+                    <h4>首页行为（搜索引擎 / 开幕动画 / 天气区）</h4>
+                    <div class="field-row">
+                        <label class="form-label" for="set-search-engine">默认搜索引擎</label>
+                        <select id="set-search-engine" class="form-select">
+                            <option value="baidu">百度（默认）</option>
+                            <option value="bing">必应</option>
+                            <option value="google">谷歌</option>
+                            <option value="360">360搜索</option>
+                            <option value="searxng">综合（SearXNG）</option>
+                        </select>
+                    </div>
+                    <div class="form-hint">首页进入时预选该引擎（仍可手动切换）；选「综合」需先在「设置」启用 SearXNG。</div>
+                    <div class="field-row">
+                        <label class="form-label form-switch"><input type="checkbox" id="set-splash"> 首页进入显示开幕动画</label>
+                    </div>
+                    <div class="form-hint">开启后每次进入首页先显示启动遮罩（LOGO + 加载条）再淡出进入；系统「减少动态效果」设置下自动跳过。</div>
+                    <div class="field-row">
+                        <label class="form-label" for="set-weather-city">天气城市（内置组件）</label>
+                        <input type="text" id="set-weather-city" class="form-input" placeholder="例如：广州 / 深圳 / 北京" value="">
+                    </div>
+                    <div class="form-hint">内置天气组件使用免密钥数据源（wttr.in），显示实时温度 + 城市 + 风力湿度 + 3 天预报；默认「广州」，改城市保存后生效（支持中文/拼音/英文城市名）。</div>
+                    <div class="field-row">
+                        <label class="form-label" for="set-weather-code">页首天气区代码（可选）</label>
+                    </div>
+                    <textarea id="set-weather-code" class="form-textarea code-area" rows="3" placeholder="可留空：启用上面的内置天气组件（推荐）。如需自定义，粘贴天气插件 iframe 嵌入代码，例如：&lt;iframe src='https://i.tianqi.com/?c=code&amp;a=getcode&amp;id=40&amp;icon=1'&gt;&lt;/iframe&gt;。"></textarea>
+                    <div class="form-hint">留空 = 使用内置天气组件（按上方「天气城市」渲染温度/风力湿度/3 天预报）。若填入自定义天气卡片 iframe 代码（如中国天气网天气条 <code>i.tianqi.com</code>、和风天气、心知天气等），则优先使用自定义代码。注意：仅 iframe 类嵌入代码可直接生效，script 类请改放进「页眉 HTML」。</div>
                 </div>
 
                 <div class="appearance-section">
@@ -393,7 +671,38 @@
         </div>
     </div>
 
-    <script src="js/api.js"></script>
-    <script src="js/admin.js"></script>
+    <!-- 自建页面编辑器模态 -->
+    <div class="modal" id="page-editor-modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-file-code"></i> 编辑自建页面</h3>
+                <button class="modal-close" id="page-editor-close" type="button"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="page-editor-meta">
+                <label class="form-label" for="page-editor-name">文件名</label>
+                <input type="text" id="page-editor-name" class="form-input" placeholder="例如：我的笔记.html" maxlength="60">
+                <span class="page-editor-url" id="page-editor-url"></span>
+            </div>
+            <div class="page-editor-grid">
+                <div class="page-editor-col">
+                    <div class="page-editor-col-head">HTML 源码（可编辑）</div>
+                    <textarea id="page-editor-code" class="form-textarea code-area page-editor-textarea" spellcheck="false" placeholder="在此编写 HTML…"></textarea>
+                </div>
+                <div class="page-editor-col">
+                    <div class="page-editor-col-head">实时预览</div>
+                    <iframe id="page-editor-preview" class="page-editor-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+                </div>
+            </div>
+            <div id="page-editor-error" class="login-error"></div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="page-editor-cancel"><i class="fas fa-times"></i> 取消</button>
+                <button type="button" class="btn btn-success" id="page-editor-save"><i class="fas fa-save"></i> 保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/background.js?v=3.3.01"></script>
+    <script src="js/api.js?v=3.3.01"></script>
+    <script src="js/admin.js?v=3.3.01"></script>
 </body>
 </html>
