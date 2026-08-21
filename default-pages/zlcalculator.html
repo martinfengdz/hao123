@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能理财计算器</title>
+    <style>
+        :root {
+            --primary: #2f6df6;
+            --secondary: #3a0ca3;
+            --accent: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4bb543;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --radius: 12px;
+            --shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .logo i {
+            font-size: 2.8rem;
+            color: var(--primary);
+        }
+        
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: var(--secondary);
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .calculator-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        
+        .tabs-container {
+            position: relative;
+            overflow: hidden;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            grid-column: 1 / -1;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: space-around;
+            padding: 0;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 20px 15px;
+            text-align: center;
+            background: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--dark);
+            transition: var(--transition);
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab:hover {
+            background: #f8f9fa;
+            color: var(--primary);
+        }
+        
+        .tab.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            background: #f0f4ff;
+        }
+        
+        .calculator {
+            background: white;
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .calculator.hidden {
+            display: none;
+        }
+        
+        .calculator-content {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .calculator-chart {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 输入区：明确“可填写”的白色卡片 */
+        .input-group {
+            margin-bottom: 18px;
+            background: #ffffff;
+            border: 2px solid #e8edf3;
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            box-shadow: 0 2px 6px rgba(33, 37, 41, 0.04);
+            transition: var(--transition);
+        }
+
+        .input-group:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.12);
+        }
+
+        /* 输入区卡片 hover 高亮：鼠标移上去边框变蓝、轻微上浮，提示"可交互" */
+        .input-group:hover {
+            border-color: #b8c6e0;
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.10);
+            transform: translateY(-1px);
+        }
+
+        /* 输入区语义标题：与下方浅蓝结果面板形成柔对比 */
+        .calculator-content::before {
+            content: "📝 输入参数";
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 0.5px;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 2px dashed #e8edf3;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: var(--secondary);
+            font-size: 1rem;
+        }
+        
+        .input-with-icon {
+            position: relative;
+        }
+        
+        .input-with-icon i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px 15px 15px 50px;
+            border: 2px solid #dbe3ec;
+            border-radius: calc(var(--radius) - 4px);
+            background: #f6f9fc;
+            font-size: 1.05rem;
+            transition: var(--transition);
+            -webkit-appearance: none;
+        }
+        
+        input:focus {
+            border-color: var(--primary);
+            background: #ffffff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.18);
+        }
+
+        /* 必填标记：本工具所有输入字段均为必填，统一红色星号提示 */
+        .input-group label::after {
+            content: " *";
+            color: #ef4444;
+            font-weight: 700;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            touch-action: manipulation;
+        }
+        
+        /* 主按钮：蓝渐变，与 customs 计算按钮同一套色系，白字，悬浮上浮+加深阴影 */
+        .calculate-btn {
+            background: linear-gradient(to right, #2f6df6, #13b4a6);
+            color: white;
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.28);
+        }
+        
+        .calculate-btn:hover, .calculate-btn:active {
+            background: linear-gradient(to right, #13b4a6, #2f6df6);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(67, 97, 238, 0.38);
+        }
+        
+        /* 次按钮（清空）：白底蓝边蓝字，与主按钮形成主次层级 */
+        .clear-btn {
+            background: #ffffff;
+            color: #3a86ff;
+            border: 2px solid #2f6df6;
+        }
+        
+        .clear-btn:hover, .clear-btn:active {
+            background: #eef4ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.18);
+        }
+
+        /* 两步走确认态：按钮变红+脉冲，提示"再点一次才执行"，3 秒后自动恢复 */
+        .clear-btn.confirm-pending {
+            background: #fff4f4;
+            color: #ef4444;
+            border-color: #ef4444;
+            transform: none;
+            animation: confirmPulse 1.1s ease-in-out infinite;
+        }
+
+        @keyframes confirmPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.40); }
+            50% { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0); }
+        }
+        
+        /* 输出区：浅蓝"结果面板"，与白色输入卡片形成柔和的明度+色相对比（不刺眼） */
+        .result-container {
+            margin-top: 25px;
+            padding: 25px;
+            background: linear-gradient(135deg, #eef4ff 0%, #f0f9ff 100%);
+            border-radius: var(--radius);
+            border-left: 5px solid var(--primary);
+            color: var(--dark);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.10);
+        }
+        
+        .result-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .result-value {
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .result-detail {
+            color: #475569;
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+        
+        .chart-container {
+            margin-top: 30px;
+            height: 280px;
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .comparison-item {
+            padding: 15px;
+            border-radius: var(--radius);
+            text-align: center;
+            background: white;
+            color: var(--dark);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .comparison-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .tips {
+            padding: 25px;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .tips h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3rem;
+        }
+        
+        .tip-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .tip-item:last-child {
+            border-bottom: none;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.95rem;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        
+        .footer-links a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        
+        .footer-links a:hover {
+            color: var(--secondary);
+        }
+        
+        .history-section {
+            padding: 25px;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-top: 30px;
+        }
+        
+        .history-item {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .history-type {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+        
+        .history-value {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: rgba(75, 181, 67, 0.1);
+            color: var(--success);
+        }
+        
+        .badge-warning {
+            background: rgba(255, 193, 7, 0.1);
+            color: var(--warning);
+        }
+        
+        .badge-danger {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--danger);
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 4px;
+            transition: width 1s ease-in-out;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 18px 25px;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--success);
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            text-align: left;
+            max-width: 400px;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            border-left-color: var(--danger);
+        }
+        
+        .info-section {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .quick-calculations {
+            background: white;
+            border-radius: var(--radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+        
+        .quick-calculations h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .quick-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .quick-btn {
+            padding: 15px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .quick-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        /* 平板和手机样式 */
+        @media (max-width: 1024px) {
+            .calculator-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .calculator {
+                grid-template-columns: 1fr;
+            }
+            
+            .calculator-chart {
+                order: -1;
+            }
+            
+            .quick-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            header {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .logo i {
+                font-size: 2rem;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .calculator {
+                padding: 20px;
+                gap: 20px;
+            }
+            
+            .tabs-container {
+                overflow-x: auto;
+            }
+            
+            .tabs {
+                min-width: max-content;
+                padding: 0 10px;
+            }
+            
+            .tab {
+                padding: 16px 12px;
+                font-size: 0.95rem;
+                min-width: 100px;
+            }
+            
+            .input-group {
+                margin-bottom: 18px;
+            }
+            
+            label {
+                font-size: 0.95rem;
+            }
+            
+            input {
+                padding: 14px 15px 14px 45px;
+            }
+            
+            .input-with-icon i {
+                left: 15px;
+                font-size: 1rem;
+            }
+            
+            .buttons {
+                margin-top: 20px;
+            }
+            
+            button {
+                padding: 14px;
+            }
+            
+            .result-container {
+                margin-top: 20px;
+                padding: 20px;
+            }
+            
+            .result-title {
+                font-size: 1.1rem;
+            }
+            
+            .result-value {
+                font-size: 1.6rem;
+            }
+            
+            .chart-container {
+                height: 200px;
+                margin-top: 25px;
+            }
+            
+            .comparison {
+                gap: 12px;
+                margin-top: 15px;
+            }
+            
+            .comparison-item {
+                padding: 12px;
+            }
+            
+            .comparison-value {
+                font-size: 1.2rem;
+            }
+            
+            .tips, .history-section, .quick-calculations {
+                padding: 18px;
+            }
+            
+            .tips h3, .quick-calculations h3 {
+                font-size: 1.2rem;
+            }
+            
+            footer {
+                margin-top: 30px;
+                padding: 18px;
+                font-size: 0.85rem;
+            }
+            
+            .progress-bar {
+                height: 6px;
+                margin: 12px 0;
+            }
+            
+            .notification {
+                top: 20px;
+                right: 20px;
+                left: 20px;
+                padding: 15px 20px;
+                text-align: center;
+                max-width: none;
+            }
+        }
+        
+        /* 超小屏幕设备优化 */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            header {
+                padding: 15px;
+            }
+            
+            .calculator {
+                padding: 15px;
+            }
+            
+            .tab {
+                padding: 14px 8px;
+                font-size: 0.9rem;
+                min-width: 85px;
+            }
+            
+            input {
+                padding: 12px 12px 12px 40px;
+            }
+            
+            .input-with-icon i {
+                left: 12px;
+            }
+            
+            .buttons {
+                flex-direction: column;
+            }
+            
+            .result-container {
+                padding: 15px;
+            }
+            
+            .result-value {
+                font-size: 1.4rem;
+            }
+            
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                📈
+                <div>
+                    <h1>智能理财计算器</h1>
+                    <p class="subtitle">精准计算您的投资收益，助您实现财务目标 - 专业理财分析工具</p>
+                </div>
+            </div>
+        </header>
+        
+        <div class="calculator-container">
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab active" data-tab="final-return">最终收益</button>
+                    <button class="tab" data-tab="return-rate">收益率分析</button>
+                    <button class="tab" data-tab="fixed-investment">定投计算</button>
+                    <button class="tab" data-tab="financial-freedom">财务自由</button>
+                </div>
+            </div>
+            
+            <div class="calculator-section">
+                <!-- 最终收益计算器 -->
+                <div class="calculator" id="final-return">
+                    <div class="calculator-content">
+                        <div class="input-group">
+                            <label for="principal">💵 本金金额</label>
+                            <div class="input-with-icon">
+                                ＄
+                                <input type="number" id="principal" placeholder="例如：10000" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="annual-return">％ 年化收益率 (%)</label>
+                            <div class="input-with-icon">
+                                📈
+                                <input type="number" id="annual-return" placeholder="例如：8" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="investment-years">📅 投资年限</label>
+                            <div class="input-with-icon">
+                                ⏱️
+                                <input type="number" id="investment-years" placeholder="例如：5" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="buttons">
+                            <button class="calculate-btn" id="calculate-final">
+                                🧮 计算收益
+                            </button>
+                            <button class="clear-btn" id="clear-final">
+                                🧹 清空
+                            </button>
+                        </div>
+                        
+                        <div class="result-container">
+                            <h3 class="result-title">🪙 计算结果</h3>
+                            <div class="result-value" id="final-result">--</div>
+                            <div class="result-detail" id="final-detail"></div>
+                            
+                            <div class="progress-bar">
+                                <div class="progress" id="final-progress" style="width: 0%"></div>
+                            </div>
+                            
+                            <div class="comparison">
+                                <div class="comparison-item">
+                                    <div>初始本金</div>
+                                    <div class="comparison-value" id="initial-principal">--</div>
+                                </div>
+                                <div class="comparison-item">
+                                    <div>最终收益</div>
+                                    <div class="comparison-value" id="total-earnings">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="calculator-chart">
+                        <div class="chart-container">
+                            <canvas id="final-chart" style="width:100%;height:280px;display:block"></canvas>
+                        </div>
+                        <div class="tips">
+                            <h3>💡 复利计算原理</h3>
+                            <div class="tip-item">
+                                <p>复利计算公式：FV = PV × (1 + r)^n</p>
+                                <p>其中 FV 是未来价值，PV 是现值，r 是年利率，n 是投资年数。</p>
+                            </div>
+                            <div class="tip-item">
+                                <p>72法则：用72除以年化收益率，可以估算资金翻倍所需年数。</p>
+                                <p>例如：年化收益8%，资金翻倍需要约72÷8=9年。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 收益率计算器 -->
+                <div class="calculator hidden" id="return-rate">
+                    <div class="calculator-content">
+                        <div class="input-group">
+                            <label for="buy-price">🛒 买入价格</label>
+                            <div class="input-with-icon">
+                                ＄
+                                <input type="number" id="buy-price" placeholder="例如：100" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="sell-price">🧾 卖出价格</label>
+                            <div class="input-with-icon">
+                                ＄
+                                <input type="number" id="sell-price" placeholder="例如：150" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="hold-years">📅 持有年限</label>
+                            <div class="input-with-icon">
+                                ⏱️
+                                <input type="number" id="hold-years" placeholder="例如：3" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="buttons">
+                            <button class="calculate-btn" id="calculate-return">
+                                🧮 计算收益率
+                            </button>
+                            <button class="clear-btn" id="clear-return">
+                                🧹 清空
+                            </button>
+                        </div>
+                        
+                        <div class="result-container">
+                            <h3 class="result-title">📊 收益率分析</h3>
+                            <div class="result-value" id="return-result">--</div>
+                            <div class="result-detail" id="return-detail"></div>
+                            
+                            <div class="comparison">
+                                <div class="comparison-item">
+                                    <div>总收益率</div>
+                                    <div class="comparison-value" id="total-return">--</div>
+                                </div>
+                                <div class="comparison-item">
+                                    <div>年化收益率</div>
+                                    <div class="comparison-value" id="annual-return-rate">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="calculator-chart">
+                        <div class="chart-container">
+                            <canvas id="return-chart" style="width:100%;height:280px;display:block"></canvas>
+                        </div>
+                        <div class="tips">
+                            <h3>💡 收益率分析要点</h3>
+                            <div class="tip-item">
+                                <p>总收益率 = (卖出价格 - 买入价格) / 买入价格 × 100%</p>
+                            </div>
+                            <div class="tip-item">
+                                <p>年化收益率 = [(卖出价格 / 买入价格)^(1/持有年限) - 1] × 100%</p>
+                            </div>
+                            <div class="tip-item">
+                                <p>年化收益率能更准确地反映投资的真实收益水平，便于不同期限投资的比较。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 定投计算器 -->
+                <div class="calculator hidden" id="fixed-investment">
+                    <div class="calculator-content">
+                        <div class="input-group">
+                            <label for="monthly-invest">👛 每月投资金额</label>
+                            <div class="input-with-icon">
+                                ＄
+                                <input type="number" id="monthly-invest" placeholder="例如：1000" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="investment-period">📅 投资期限 (年)</label>
+                            <div class="input-with-icon">
+                                ⏱️
+                                <input type="number" id="investment-period" placeholder="例如：10" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="expected-return">％ 预期年化收益率 (%)</label>
+                            <div class="input-with-icon">
+                                📈
+                                <input type="number" id="expected-return" placeholder="例如：7" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="buttons">
+                            <button class="calculate-btn" id="calculate-investment">
+                                🧮 计算定投
+                            </button>
+                            <button class="clear-btn" id="clear-investment">
+                                🧹 清空
+                            </button>
+                        </div>
+                        
+                        <div class="result-container">
+                            <h3 class="result-title">🐷 定投结果</h3>
+                            <div class="result-value" id="investment-result">--</div>
+                            <div class="result-detail" id="investment-detail"></div>
+                            
+                            <div class="comparison">
+                                <div class="comparison-item">
+                                    <div>总投资额</div>
+                                    <div class="comparison-value" id="total-investment">--</div>
+                                </div>
+                                <div class="comparison-item">
+                                    <div>总收益</div>
+                                    <div class="comparison-value" id="investment-earnings">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="calculator-chart">
+                        <div class="chart-container">
+                            <canvas id="investment-chart" style="width:100%;height:280px;display:block"></canvas>
+                        </div>
+                        <div class="tips">
+                            <h3>💡 定投优势</h3>
+                            <div class="tip-item">
+                                <p><strong>平均成本法</strong>：定期投资可以平摊成本，降低市场波动风险。</p>
+                            </div>
+                            <div class="tip-item">
+                                <p><strong>强制储蓄</strong>：培养长期投资习惯，实现财富积累。</p>
+                            </div>
+                            <div class="tip-item">
+                                <p><strong>复利效应</strong>：长期定投可以充分利用复利效应，实现财富增值。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 财务自由计算器 -->
+                <div class="calculator hidden" id="financial-freedom">
+                    <div class="calculator-content">
+                        <div class="input-group">
+                            <label for="current-savings">🐷 当前储蓄</label>
+                            <div class="input-with-icon">
+                                ＄
+                                <input type="number" id="current-savings" placeholder="例如：50000" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="monthly-income">💵 月收入</label>
+                            <div class="input-with-icon">
+                                ＄
+                                <input type="number" id="monthly-income" placeholder="例如：10000" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="monthly-expenses">🧾 月支出</label>
+                            <div class="input-with-icon">
+                                ＄
+                                <input type="number" id="monthly-expenses" placeholder="例如：6000" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="freedom-return">％ 投资年化收益率 (%)</label>
+                            <div class="input-with-icon">
+                                📈
+                                <input type="number" id="freedom-return" placeholder="例如：6" inputmode="decimal">
+                            </div>
+                        </div>
+                        
+                        <div class="buttons">
+                            <button class="calculate-btn" id="calculate-freedom">
+                                🧮 计算财务自由
+                            </button>
+                            <button class="clear-btn" id="clear-freedom">
+                                🧹 清空
+                            </button>
+                        </div>
+                        
+                        <div class="result-container">
+                            <h3 class="result-title">👑 财务自由分析</h3>
+                            <div class="result-value" id="freedom-result">--</div>
+                            <div class="result-detail" id="freedom-detail"></div>
+                            
+                            <div class="progress-bar">
+                                <div class="progress" id="freedom-progress" style="width: 0%"></div>
+                            </div>
+                            
+                            <div class="comparison">
+                                <div class="comparison-item">
+                                    <div>所需资金</div>
+                                    <div class="comparison-value" id="required-capital">--</div>
+                                </div>
+                                <div class="comparison-item">
+                                    <div>达成时间</div>
+                                    <div class="comparison-value" id="freedom-time">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="calculator-chart">
+                        <div class="chart-container">
+                            <canvas id="freedom-chart" style="width:100%;height:280px;display:block"></canvas>
+                        </div>
+                        <div class="tips">
+                            <h3>💡 财务自由公式</h3>
+                            <div class="tip-item">
+                                <p><strong>财务自由 = 被动收入 ≥ 日常支出</strong></p>
+                            </div>
+                            <div class="tip-item">
+                                <p><strong>所需资金 = 年支出 ÷ 年化收益率</strong></p>
+                                <p>例如：月支出6000元，年支出72000元，年化收益率6%，所需资金为72000÷6%=120万元。</p>
+                            </div>
+                            <div class="tip-item">
+                                <p>通过投资积累资产，让资产产生的被动收入覆盖日常开支，即实现财务自由。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <div class="quick-calculations">
+                    <h3>⚡ 快速计算</h3>
+                    <div class="quick-buttons">
+                        <div class="quick-btn" data-calc="final-return" data-values='{"principal":10000,"annual-return":8,"investment-years":5}'>
+                            1万本金，8%收益，5年
+                        </div>
+                        <div class="quick-btn" data-calc="final-return" data-values='{"principal":50000,"annual-return":10,"investment-years":10}'>
+                            5万本金，10%收益，10年
+                        </div>
+                        <div class="quick-btn" data-calc="fixed-investment" data-values='{"monthly-invest":1000,"investment-period":20,"expected-return":7}'>
+                            月投1000，20年，7%收益
+                        </div>
+                        <div class="quick-btn" data-calc="financial-freedom" data-values='{"current-savings":100000,"monthly-income":15000,"monthly-expenses":8000,"freedom-return":5}'>
+                            财务自由模拟
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tips">
+                    <h3>💡 理财小贴士</h3>
+                    <div class="tip-item">
+                        <strong>复利的力量</strong>
+                        <p>长期投资中，复利效应可以使您的资产呈指数级增长。尽早开始投资，时间就是您最好的朋友。</p>
+                    </div>
+                    <div class="tip-item">
+                        <strong>分散投资</strong>
+                        <p>不要把所有鸡蛋放在一个篮子里。通过分散投资降低风险，提高整体投资组合的稳定性。</p>
+                    </div>
+                    <div class="tip-item">
+                        <strong>定期定额投资</strong>
+                        <p>定期定额投资可以平摊成本，降低市场波动带来的风险，适合长期理财规划。</p>
+                    </div>
+                    <div class="tip-item">
+                        <strong>财务自由公式</strong>
+                        <p>财务自由 = 被动收入 ≥ 日常支出。通过投资积累资产，让钱为您工作。</p>
+                    </div>
+                </div>
+                
+                <div class="history-section">
+                    <h3>🕒 最近计算记录</h3>
+                    <div id="history-list">
+                        <!-- 历史记录将通过JavaScript动态添加 -->
+                        <div class="history-item">
+                            <div>
+                                <span class="history-type">最终收益计算</span>
+                                <div>本金: 10,000元 | 收益率: 8% | 期限: 5年</div>
+                            </div>
+                            <div class="history-value">14,693元</div>
+                        </div>
+                        <div class="history-item">
+                            <div>
+                                <span class="history-type">定投计算</span>
+                                <div>月投: 1,000元 | 期限: 10年 | 收益率: 7%</div>
+                            </div>
+                            <div class="history-value">173,084元</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>© 2026智能理财计算工具</p>
+            <p>📈 v3.1.0 · 更新于 2026-08-20 · 完全离线可用</p>
+            <div class="footer-links">
+                <a href="#">🌐 官方网站</a>
+                <a href="#">✉️ 联系我们</a>
+                <a href="#">🛡️ 隐私政策</a>
+            </div>
+        </footer>
+    </div>
+    
+    <div class="notification" id="notification">
+        ✅ 计算完成！
+    </div>
+    
+    <script>
+const NativeChart = {
+  clear(id){
+    const c=document.getElementById(id); if(!c) return;
+    const x=c.getContext('2d'); x.clearRect(0,0,c.width,c.height);
+  },
+  render(id, cfg){
+    const c=document.getElementById(id); if(!c) return;
+    const x=c.getContext('2d');
+    const dpr=window.devicePixelRatio||1;
+    const W=c.clientWidth||(c.parentElement?c.parentElement.clientWidth:600);
+    const H=c.clientHeight||280;
+    c.width=Math.max(1,W*dpr); c.height=Math.max(1,H*dpr);
+    x.setTransform(dpr,0,0,dpr,0,0);
+    x.clearRect(0,0,W,H);
+    const padL=58,padR=16,padT=46,padB=34;
+    const plotW=W-padL-padR, plotH=H-padT-padB;
+    const labels=(cfg.data&&cfg.data.labels)||[];
+    const datasets=(cfg.data&&cfg.data.datasets)||[];
+    const title=(cfg.options&&cfg.options.plugins&&cfg.options.plugins.title)?cfg.options.plugins.title.text:'';
+    const fmt=function(v){return '¥'+Number(v).toLocaleString('zh-CN',{maximumFractionDigits:0});};
+    let all=[]; datasets.forEach(function(ds){(ds.data||[]).forEach(function(v){if(typeof v==='number')all.push(v);});});
+    if(all.length===0) all=[0,1];
+    let maxV=Math.max.apply(null,all), minV=Math.min(0,Math.min.apply(null,all));
+    if(maxV===minV) maxV=minV+1;
+    maxV=maxV*1.06;
+    x.fillStyle='#2c3e50'; x.font='bold 13px sans-serif'; x.textAlign='left';
+    x.fillText(title||'', padL, 18);
+    const ticks=5; x.font='11px sans-serif';
+    for(let i=0;i<=ticks;i++){
+      const val=minV+(maxV-minV)*i/ticks;
+      const y=padT+plotH-(plotH*i/ticks);
+      x.strokeStyle='#eef2f7'; x.lineWidth=1;
+      x.beginPath(); x.moveTo(padL,y); x.lineTo(padL+plotW,y); x.stroke();
+      x.fillStyle='#64748b'; x.textAlign='right';
+      x.fillText(fmt(val), padL-6, y+4);
+    }
+    x.strokeStyle='#cbd5e0'; x.beginPath();
+    x.moveTo(padL,padT); x.lineTo(padL,padT+plotH); x.lineTo(padL+plotW,padT+plotH); x.stroke();
+    x.fillStyle='#64748b'; x.textAlign='center';
+    const n=labels.length;
+    labels.forEach(function(lb,i){
+      const cx = n<=1 ? padL+plotW/2 : padL+plotW*i/(n-1);
+      x.fillText(lb, cx, padT+plotH+16);
+    });
+    if(cfg.type==='line'){
+      datasets.forEach(function(ds){
+        const col=ds.borderColor||'#2f6df6';
+        if(ds.fill){
+          const g=x.createLinearGradient(0,padT,0,padT+plotH);
+          g.addColorStop(0, ds.backgroundColor||'rgba(67,97,238,0.15)');
+          g.addColorStop(1,'rgba(67,97,238,0)');
+          x.fillStyle=g; x.beginPath();
+          ds.data.forEach(function(v,i){const cx=padL+plotW*i/(n-1);const cy=padT+plotH-plotH*(v-minV)/(maxV-minV);if(i===0)x.moveTo(cx,cy);else x.lineTo(cx,cy);});
+          x.lineTo(padL+plotW,padT+plotH); x.lineTo(padL,padT+plotH); x.closePath(); x.fill();
+        }
+        x.setLineDash(ds.borderDash||[]);
+        x.strokeStyle=col; x.lineWidth=ds.borderWidth||2; x.beginPath();
+        ds.data.forEach(function(v,i){const cx=padL+plotW*i/(n-1);const cy=padT+plotH-plotH*(v-minV)/(maxV-minV);if(i===0)x.moveTo(cx,cy);else x.lineTo(cx,cy);});
+        x.stroke(); x.setLineDash([]);
+        if(ds.pointRadius!==0){
+          x.fillStyle=col;
+          ds.data.forEach(function(v,i){const cx=padL+plotW*i/(n-1);const cy=padT+plotH-plotH*(v-minV)/(maxV-minV);x.beginPath();x.arc(cx,cy,3,0,Math.PI*2);x.fill();});
+        }
+      });
+    } else if(cfg.type==='bar'){
+      const nds=datasets.length;
+      const slot=plotW/n;
+      const bw=Math.min(38, slot*0.62/nds);
+      datasets.forEach(function(ds,di){
+        const base=ds.backgroundColor;
+        ds.data.forEach(function(v,i){
+          const cx=padL+slot*(i+0.5);
+          const cy=padT+plotH-plotH*(v-minV)/(maxV-minV);
+          const col=Array.isArray(base)?(base[i]||'#2f6df6'):(base||'#2f6df6');
+          x.fillStyle=col;
+          x.fillRect(cx-bw*nds/2+di*bw, cy, bw, (padT+plotH)-cy);
+        });
+      });
+    }
+    if(datasets.length>=1){
+      let lx=padL; x.textAlign='left'; x.font='11px sans-serif';
+      datasets.forEach(function(ds){
+        const col=ds.borderColor||(Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:(ds.backgroundColor||'#2f6df6'));
+        x.fillStyle=col; x.fillRect(lx,30,10,10);
+        x.fillStyle='#475569'; x.fillText(ds.label||'', lx+14, 39);
+        lx += 28 + (ds.label||'').length*7;
+      });
+    }
+  }
+};
+        // 全局变量
+        let historyData = [];
+        let charts = {};
+        
+        // DOM 加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化标签页切换
+            initTabs();
+            
+            // 初始化计算按钮事件
+            initCalculateButtons();
+            
+            // 初始化清空按钮事件
+            initClearButtons();
+            
+            // 初始化快速计算按钮
+            initQuickButtons();
+            
+            // 加载历史记录
+            loadHistory();
+        });
+        
+        // 初始化标签页切换
+        function initTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            const calculators = document.querySelectorAll('.calculator');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // 更新标签状态
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 显示对应的计算器
+                    calculators.forEach(calc => {
+                        calc.classList.add('hidden');
+                        if (calc.id === tabId) {
+                            calc.classList.remove('hidden');
+                        }
+                    });
+                });
+            });
+        }
+        
+        // 初始化计算按钮事件
+        function initCalculateButtons() {
+            // 最终收益计算
+            document.getElementById('calculate-final').addEventListener('click', calculateFinalReturn);
+            
+            // 收益率计算
+            document.getElementById('calculate-return').addEventListener('click', calculateReturnRate);
+            
+            // 定投计算
+            document.getElementById('calculate-investment').addEventListener('click', calculateFixedInvestment);
+            
+            // 财务自由计算
+            document.getElementById('calculate-freedom').addEventListener('click', calculateFinancialFreedom);
+        }
+        
+        // 两步确认辅助：首次点击进入"待确认"态（按钮变红+脉冲），再次点击才执行；3 秒未确认自动恢复
+        function attachTwoStepConfirm(button, confirmHTML, actionFn) {
+            if (!button) return;
+            const originalHTML = button.innerHTML;
+            let pending = false;
+            let timer = null;
+            button.addEventListener('click', function() {
+                if (!pending) {
+                    pending = true;
+                    button.innerHTML = confirmHTML;
+                    button.classList.add('confirm-pending');
+                    timer = setTimeout(function() {
+                        pending = false;
+                        button.innerHTML = originalHTML;
+                        button.classList.remove('confirm-pending');
+                    }, 3000);
+                } else {
+                    clearTimeout(timer);
+                    pending = false;
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('confirm-pending');
+                    actionFn();
+                }
+            });
+        }
+
+        // 初始化清空按钮事件（两步走确认：首次点变红提示，再点才清空）
+        function initClearButtons() {
+            const confirmHTML = '⚠️ 再次点击确认清空';
+            attachTwoStepConfirm(document.getElementById('clear-final'), confirmHTML, function() { clearInputs('final-return'); });
+            attachTwoStepConfirm(document.getElementById('clear-return'), confirmHTML, function() { clearInputs('return-rate'); });
+            attachTwoStepConfirm(document.getElementById('clear-investment'), confirmHTML, function() { clearInputs('fixed-investment'); });
+            attachTwoStepConfirm(document.getElementById('clear-freedom'), confirmHTML, function() { clearInputs('financial-freedom'); });
+        }
+        
+        // 初始化快速计算按钮
+        function initQuickButtons() {
+            const quickButtons = document.querySelectorAll('.quick-btn');
+            
+            quickButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const calcType = this.getAttribute('data-calc');
+                    const values = JSON.parse(this.getAttribute('data-values'));
+                    
+                    // 切换到对应的计算器
+                    document.querySelectorAll('.tab').forEach(tab => {
+                        tab.classList.remove('active');
+                        if (tab.getAttribute('data-tab') === calcType) {
+                            tab.classList.add('active');
+                        }
+                    });
+                    
+                    document.querySelectorAll('.calculator').forEach(calc => {
+                        calc.classList.add('hidden');
+                        if (calc.id === calcType) {
+                            calc.classList.remove('hidden');
+                        }
+                    });
+                    
+                    // 填充数值
+                    for (const [key, value] of Object.entries(values)) {
+                        const input = document.getElementById(key);
+                        if (input) {
+                            input.value = value;
+                        }
+                    }
+                    
+                    // 执行计算
+                    switch(calcType) {
+                        case 'final-return':
+                            calculateFinalReturn();
+                            break;
+                        case 'return-rate':
+                            calculateReturnRate();
+                            break;
+                        case 'fixed-investment':
+                            calculateFixedInvestment();
+                            break;
+                        case 'financial-freedom':
+                            calculateFinancialFreedom();
+                            break;
+                    }
+                    
+                    showNotification('快速计算完成！');
+                });
+            });
+        }
+        
+        // 最终收益计算
+        function calculateFinalReturn() {
+            const principal = parseFloat(document.getElementById('principal').value);
+            const annualReturn = parseFloat(document.getElementById('annual-return').value);
+            const years = parseFloat(document.getElementById('investment-years').value);
+            
+            // 输入验证（仅拦截空值/非数字，允许输入 0）
+            if (isNaN(principal) || isNaN(annualReturn) || isNaN(years)) {
+                showNotification('请填写所有必填字段', true);
+                return;
+            }
+            
+            // 计算最终金额
+            const finalAmount = principal * Math.pow(1 + annualReturn / 100, years);
+            const earnings = finalAmount - principal;
+            const earningsRate = (earnings / principal) * 100;
+            
+            // 更新UI
+            document.getElementById('final-result').textContent = formatCurrency(finalAmount);
+            document.getElementById('final-detail').innerHTML = `
+                收益金额: <strong>${formatCurrency(earnings)}</strong> | 
+                收益率: <strong>${earningsRate.toFixed(2)}%</strong>
+            `;
+            document.getElementById('initial-principal').textContent = formatCurrency(principal);
+            document.getElementById('total-earnings').textContent = formatCurrency(earnings);
+            
+            // 更新进度条
+            const progress = Math.min(100, (years / 30) * 100);
+            document.getElementById('final-progress').style.width = `${progress}%`;
+            
+            // 绘制图表
+            drawFinalReturnChart(principal, annualReturn, years);
+            
+            // 添加到历史记录
+            addToHistory('最终收益计算', `本金: ${formatCurrency(principal)} | 收益率: ${annualReturn}% | 期限: ${years}年`, formatCurrency(finalAmount));
+            
+            // 显示通知
+            showNotification('最终收益计算完成！');
+        }
+        
+        // 收益率计算
+        function calculateReturnRate() {
+            const buyPrice = parseFloat(document.getElementById('buy-price').value);
+            const sellPrice = parseFloat(document.getElementById('sell-price').value);
+            const holdYears = parseFloat(document.getElementById('hold-years').value);
+            
+            // 输入验证（仅拦截空值/非数字，允许输入 0）
+            if (isNaN(buyPrice) || isNaN(sellPrice) || isNaN(holdYears)) {
+                showNotification('请填写所有必填字段', true);
+                return;
+            }
+            
+            // 计算收益率
+            const totalReturn = ((sellPrice - buyPrice) / buyPrice) * 100;
+            const annualReturn = (Math.pow(sellPrice / buyPrice, 1 / holdYears) - 1) * 100;
+            
+            // 更新UI
+            document.getElementById('return-result').textContent = `${totalReturn.toFixed(2)}%`;
+            document.getElementById('return-detail').innerHTML = `
+                总收益: <strong>${formatCurrency(sellPrice - buyPrice)}</strong> | 
+                年化收益率: <strong>${annualReturn.toFixed(2)}%</strong>
+            `;
+            document.getElementById('total-return').textContent = `${totalReturn.toFixed(2)}%`;
+            document.getElementById('annual-return-rate').textContent = `${annualReturn.toFixed(2)}%`;
+            
+            // 绘制图表
+            drawReturnRateChart(buyPrice, sellPrice, holdYears);
+            
+            // 添加到历史记录
+            addToHistory('收益率计算', `买入: ${formatCurrency(buyPrice)} | 卖出: ${formatCurrency(sellPrice)} | 持有: ${holdYears}年`, `${totalReturn.toFixed(2)}%`);
+            
+            // 显示通知
+            showNotification('收益率计算完成！');
+        }
+        
+        // 定投计算
+        function calculateFixedInvestment() {
+            const monthlyInvest = parseFloat(document.getElementById('monthly-invest').value);
+            const period = parseFloat(document.getElementById('investment-period').value);
+            const expectedReturn = parseFloat(document.getElementById('expected-return').value);
+            
+            // 输入验证（仅拦截空值/非数字，允许输入 0）
+            if (isNaN(monthlyInvest) || isNaN(period) || isNaN(expectedReturn)) {
+                showNotification('请填写所有必填字段', true);
+                return;
+            }
+            
+            // 计算定投结果
+            const monthlyRate = expectedReturn / 100 / 12;
+            const months = period * 12;
+            
+            let futureValue;
+            if (monthlyRate === 0) {
+                futureValue = monthlyInvest * months;
+            } else {
+                futureValue = monthlyInvest * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+            }
+            
+            const totalInvestment = monthlyInvest * months;
+            const earnings = futureValue - totalInvestment;
+            
+            // 更新UI
+            document.getElementById('investment-result').textContent = formatCurrency(futureValue);
+            document.getElementById('investment-detail').innerHTML = `
+                总投资: <strong>${formatCurrency(totalInvestment)}</strong> | 
+                总收益: <strong>${formatCurrency(earnings)}</strong>
+            `;
+            document.getElementById('total-investment').textContent = formatCurrency(totalInvestment);
+            document.getElementById('investment-earnings').textContent = formatCurrency(earnings);
+            
+            // 绘制图表
+            drawInvestmentChart(monthlyInvest, period, expectedReturn);
+            
+            // 添加到历史记录
+            addToHistory('定投计算', `月投: ${formatCurrency(monthlyInvest)} | 期限: ${period}年 | 收益率: ${expectedReturn}%`, formatCurrency(futureValue));
+            
+            // 显示通知
+            showNotification('定投计算完成！');
+        }
+        
+        // 财务自由计算
+        function calculateFinancialFreedom() {
+            const currentSavings = parseFloat(document.getElementById('current-savings').value);
+            const monthlyIncome = parseFloat(document.getElementById('monthly-income').value);
+            const monthlyExpenses = parseFloat(document.getElementById('monthly-expenses').value);
+            const freedomReturn = parseFloat(document.getElementById('freedom-return').value);
+            
+            // 输入验证（仅拦截空值/非数字，允许输入 0）
+            if (isNaN(currentSavings) || isNaN(monthlyIncome) || isNaN(monthlyExpenses) || isNaN(freedomReturn)) {
+                showNotification('请填写所有必填字段', true);
+                return;
+            }
+            
+            // 计算财务自由
+            const annualReturn = freedomReturn / 100;
+            if (annualReturn <= 0) {
+                showNotification('投资年化收益率需大于 0', true);
+                return;
+            }
+            const requiredCapital = monthlyExpenses * 12 / annualReturn;
+            
+            // 模拟增长过程
+            let years = 0;
+            let capital = currentSavings;
+            const monthlySave = monthlyIncome - monthlyExpenses;
+            
+            while (capital < requiredCapital && years < 50) {
+                capital = capital * (1 + annualReturn) + monthlySave * 12;
+                years++;
+            }
+            
+            // 更新UI
+            document.getElementById('freedom-result').textContent = `${years} 年`;
+            document.getElementById('freedom-detail').innerHTML = `
+                所需资金: <strong>${formatCurrency(requiredCapital)}</strong> | 
+                当前资金: <strong>${formatCurrency(currentSavings)}</strong>
+            `;
+            document.getElementById('required-capital').textContent = formatCurrency(requiredCapital);
+            document.getElementById('freedom-time').textContent = `${years} 年`;
+            
+            // 更新进度条
+            const progress = Math.min(100, (currentSavings / requiredCapital) * 100);
+            document.getElementById('freedom-progress').style.width = `${progress}%`;
+            
+            // 绘制图表
+            drawFreedomChart(currentSavings, monthlySave, annualReturn, requiredCapital, years);
+            
+            // 添加到历史记录
+            addToHistory('财务自由计算', `当前储蓄: ${formatCurrency(currentSavings)} | 月收支: ${formatCurrency(monthlySave)} | 收益率: ${freedomReturn}%`, `${years}年`);
+            
+            // 显示通知
+            showNotification('财务自由计算完成！');
+        }
+        
+        // 绘制最终收益图表
+        function drawFinalReturnChart(principal, annualReturn, years) {
+            // 如果已有图表，先销毁            // 生成数据
+            const labels = [];
+            const data = [];
+            
+            for (let i = 0; i <= years; i++) {
+                labels.push(`第${i}年`);
+                data.push(principal * Math.pow(1 + annualReturn / 100, i));
+            }
+            
+            // 创建图表
+            NativeChart.render('final-chart', {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '资产增长',
+                        data: data,
+                        borderColor: '#2f6df6',
+                        backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '资产增长趋势'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 绘制收益率图表
+        function drawReturnRateChart(buyPrice, sellPrice, holdYears) {
+            // 如果已有图表，先销毁            // 生成数据
+            const labels = ['买入价格', '卖出价格'];
+            const data = [buyPrice, sellPrice];
+            const colors = ['#13b4a6', '#2f6df6'];
+            
+            // 创建图表
+            NativeChart.render('return-chart', {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '价格对比',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '价格对比'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 绘制定投图表
+        function drawInvestmentChart(monthlyInvest, period, expectedReturn) {
+            // 如果已有图表，先销毁            // 生成数据
+            const labels = [];
+            const investmentData = [];
+            const earningsData = [];
+            
+            const monthlyRate = expectedReturn / 100 / 12;
+            let totalInvestment = 0;
+            let futureValue = 0;
+            
+            for (let i = 1; i <= period; i++) {
+                labels.push(`第${i}年`);
+                
+                // 计算每年的总投资
+                totalInvestment = monthlyInvest * 12 * i;
+                
+                // 计算每年的未来价值
+                if (monthlyRate === 0) {
+                    futureValue = totalInvestment;
+                } else {
+                    const months = i * 12;
+                    futureValue = monthlyInvest * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+                }
+                
+                investmentData.push(totalInvestment);
+                earningsData.push(futureValue - totalInvestment);
+            }
+            
+            // 创建图表
+            NativeChart.render('investment-chart', {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '总投资',
+                            data: investmentData,
+                            backgroundColor: '#4cc9f0',
+                            borderColor: '#4cc9f0',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '总收益',
+                            data: earningsData,
+                            backgroundColor: '#2f6df6',
+                            borderColor: '#2f6df6',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '定投增长分析'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 绘制财务自由图表
+        function drawFreedomChart(currentSavings, monthlySave, annualReturn, requiredCapital, years) {
+            // 如果已有图表，先销毁            // 生成数据
+            const labels = [];
+            const capitalData = [];
+            const requiredData = [];
+            
+            let capital = currentSavings;
+            
+            for (let i = 0; i <= years; i++) {
+                labels.push(`第${i}年`);
+                capitalData.push(capital);
+                requiredData.push(requiredCapital);
+                
+                if (i < years) {
+                    capital = capital * (1 + annualReturn) + monthlySave * 12;
+                }
+            }
+            
+            // 创建图表
+            NativeChart.render('freedom-chart', {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '资产增长',
+                            data: capitalData,
+                            borderColor: '#2f6df6',
+                            backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: '财务自由线',
+                            data: requiredData,
+                            borderColor: '#4bb543',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '财务自由进程'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 清空输入框
+        function clearInputs(calculatorId) {
+            const inputs = document.querySelectorAll(`#${calculatorId} input`);
+            inputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // 清空结果
+            const resultContainers = document.querySelectorAll(`#${calculatorId} .result-container`);
+            resultContainers.forEach(container => {
+                const resultElements = container.querySelectorAll('.result-value, .result-detail, .comparison-value');
+                resultElements.forEach(el => {
+                    if (el.classList.contains('result-value')) {
+                        el.textContent = '--';
+                    } else if (el.classList.contains('comparison-value')) {
+                        el.textContent = '--';
+                    } else {
+                        el.innerHTML = '';
+                    }
+                });
+                
+                // 重置进度条
+                const progressBars = container.querySelectorAll('.progress');
+                progressBars.forEach(bar => {
+                    bar.style.width = '0%';
+                });
+            });
+            
+            // 销毁图表（清空对应 canvas）
+            const chartCanvasMap = {
+                'final-return': 'final-chart',
+                'return-rate': 'return-chart',
+                'fixed-investment': 'investment-chart',
+                'financial-freedom': 'freedom-chart'
+            };
+            const chartCanvasId = chartCanvasMap[calculatorId];
+            if (chartCanvasId) {
+                NativeChart.clear(chartCanvasId);
+            }
+            
+            showNotification('已清空输入');
+        }
+        
+        // 添加到历史记录
+        function addToHistory(type, details, result) {
+            const historyItem = {
+                type,
+                details,
+                result,
+                timestamp: new Date().toLocaleString()
+            };
+            
+            historyData.unshift(historyItem);
+            
+            // 限制历史记录数量
+            if (historyData.length > 5) {
+                historyData.pop();
+            }
+            
+            // 更新UI
+            updateHistoryUI();
+            
+            // 保存到本地存储
+            saveHistory();
+        }
+        
+        // 更新历史记录UI
+        function updateHistoryUI() {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+            
+            historyData.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                
+                historyItem.innerHTML = `
+                    <div>
+                        <span class="history-type">${item.type}</span>
+                        <div>${item.details}</div>
+                    </div>
+                    <div class="history-value">${item.result}</div>
+                `;
+                
+                historyList.appendChild(historyItem);
+            });
+        }
+        
+        // 加载历史记录
+        function loadHistory() {
+            const savedHistory = localStorage.getItem('calculatorHistory');
+            if (savedHistory) {
+                historyData = JSON.parse(savedHistory);
+                updateHistoryUI();
+            }
+        }
+        
+        // 保存历史记录
+        function saveHistory() {
+            localStorage.setItem('calculatorHistory', JSON.stringify(historyData));
+        }
+        
+        // 显示通知
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            notification.innerHTML = `${isError ? '⛔' : '✅'} ${message}`;
+            
+            if (isError) {
+                notification.classList.add('error');
+            } else {
+                notification.classList.remove('error');
+            }
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 格式化货币
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('zh-CN', {
+                style: 'currency',
+                currency: 'CNY',
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+    </script>
+</body>
+</html>
