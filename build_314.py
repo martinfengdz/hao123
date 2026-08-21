@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 同步 V3.1.3：把源码改动复制进 fnos 构建目录，并全树升级版本号（RELEASE_NOTES 历史段除外）
+# 同步 V3.1.6：把源码改动复制进 fnos 构建目录，并全树升级版本号（RELEASE_NOTES 历史段除外）
 import os, shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -22,8 +22,8 @@ for s, d in src_map.items():
     shutil.copyfile(sp, dp)
     print('sync', s, '->', d)
 
-# 2) 全树替换版本号 3.0.13 -> 3.1.3（排除 RELEASE_NOTES 历史段）
-OLD, NEW = '3.0.13', '3.1.3'
+# 2) 全树替换版本号 3.0.13 -> 3.1.6（排除 RELEASE_NOTES 历史段）
+OLD, NEW = '3.0.13', '3.1.6'
 skip = {'RELEASE_NOTES.md'}
 for dirpath, _, filenames in os.walk(ROOT):
     # 跳过 git / 产物
