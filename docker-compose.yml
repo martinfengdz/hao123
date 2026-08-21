@@ -9,9 +9,11 @@ services:
       - TZ=Asia/Shanghai
       - PORT=1315
       - ADMIN_PASSWORD=admin                         # ⚠️ 默认 admin，建议改成你的强密码
-      - SESSION_SECRET=your-random-secret-here      # ⚠️ 必改：随机长字符串，变更会使已登录会话失效
+      # SESSION_SECRET 可不设：不设时自动生成并持久化唯一密钥；如需自定义在此填随机长字符串
       - DATA_DIR=/app/data
       - SEARXNG_URL=http://searxng:8080             # 指向同 compose 内的 SearXNG 服务（综合版）
+      # 后台"有更新版"提示：自动比对 GitHub Releases 最新版（你的发布仓库）
+      - UPDATE_REPO=martinfengdz/hao123
     volumes:
       # 数据持久化：把宿主机目录挂到 /app/data（容器删除/更新数据不丢）
       # 飞牛示例路径：/vol1/1000/docker/qiyi-nav/data:/app/data
@@ -41,7 +43,8 @@ services:
       - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      # SearXNG 镜像（python:slim）不含 wget，改用 python3 内置探测
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz').status==200 else 1)"]
       interval: 30s
       timeout: 5s
       retries: 3
