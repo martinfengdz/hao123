@@ -69,11 +69,11 @@
 
     var state = {
         data: {},
-        darkMode: false,
+        darkMode: true,
         selected: {}, // key -> true
         activeCat: 'all', // 当前左侧分类：'all' 或具体分类 key
         activeNav: null, // 当前导航设置项：'tabs' | 'quick' | null
-        adminView: 'links', // 右侧视图：'links' | 'tabs' | 'quick'
+        adminView: 'links', // 右侧视图：'links' | 'pages' | 'help' | 'tabs' | 'quick'
         editRow: null // 表格内联编辑：{ cat, id } 编辑已有 | { isNew:true, cat } 新增
     };
 
@@ -99,6 +99,8 @@
             .replace(/"/g, '&quot;');
     }
 
+    // 版本号（与 server.js VERSION / script.js CONFIG.VERSION / RELEASE_NOTES 同源，构建时统一 bump；页脚版本由 JS 注入，不在 footer HTML 写死）
+    var APP_VERSION = '3.3.01';
     // 整页页脚默认 HTML（footerHtml 为空时作默认值；也作为后台「恢复默认」写入的整段页脚代码）
     var DEFAULT_FOOTER_HTML = [
         '<div class="footer-sections">',
@@ -108,7 +110,7 @@
         '  <div class="footer-status">',
         '    <span id="system-status"><i class="fas fa-circle status-online"></i> 系统正常</span>',
         '    <span class="footer-separator">|</span>',
-        '    <span>版本: <span class="version">V3.1.3</span></span>',
+        '    <span>版本: <span class="version" id="footer-version"></span></span>',
         '    <span class="footer-separator">|</span>',
         '    <span>© <span id="current-year-footer"></span> 奇易智能导航</span>',
         '    <span class="footer-separator">|</span>',
@@ -122,7 +124,11 @@
     // ---------- 鉴权视图切换 ----------
     function showDashboard() {
         $('login-view').style.display = 'none';
-        $('dashboard-view').style.display = 'block';
+        // 必须用 flex 才能启用后台「固定窗 + 动态窗」外壳：
+        // .dashboard-view 为 flex 纵向列（height:100vh, overflow:hidden），
+        // 右上固定头部 flex:0 0 auto 常驻、右下 .content-scroll 独立滚动。
+        // 若设为 block 会破坏该高度约束链，导致动态内容回到整页滚动、头部不再固定。
+        $('dashboard-view').style.display = 'flex';
         loadAll();
         loadAppearanceState();
     }
@@ -143,7 +149,8 @@
 
     // ---------- 数据加载与渲染 ----------
     function loadAll() {
-        Api.getLinks().then(function (r) {
+        // full=1：后台编辑需要完整字段（含登录用户名/密码 luser/lpass）；公开视图不返回凭据
+        Api.getLinks(true).then(function (r) {
             if (r.status === 200 && r.data && r.data.data) {
                 state.data = r.data.data;
                 // 补全缺失分类
@@ -177,7 +184,7 @@
         cards.innerHTML =
             statCard('fa-link', 'success', total, '链接总数') +
             statCard('fa-layer-group', 'info', CAT_KEYS.length, '分类数量') +
-            statCard('fa-palette', 'warning', marked, '已标记') +
+            statCard('fa-star', 'warning', marked, '已标记') +
             statCard('fa-filter', '', viewNum, viewLabel);
         renderSidebar();
     }
@@ -220,13 +227,30 @@
         });
     }
 
-    // 右侧视图切换：links（网址表格）/ tabs（主标签页）/ quick（快捷访问）
+    // 右侧顶层视图切换：links（链接管理）/ pages（自建页面）/ help（帮助说明）
     function switchView(view) {
         state.adminView = view;
-        var lv = $('links-view'), tv = $('nav-tabs-view'), qv = $('nav-quick-view');
+        var lv = $('links-view'), pv = $('nav-pages-view'), hv = $('nav-help-view'),
+            tv = $('nav-tabs-view'), qv = $('nav-quick-view');
         if (lv) lv.style.display = (view === 'links') ? 'block' : 'none';
+        if (pv) pv.style.display = (view === 'pages') ? 'block' : 'none';
+        if (hv) hv.style.display = (view === 'help') ? 'block' : 'none';
         if (tv) tv.style.display = (view === 'tabs') ? 'block' : 'none';
         if (qv) qv.style.display = (view === 'quick') ? 'block' : 'none';
+    }
+
+    // 网址分类列表显示（主标签页 / 底部快捷访问已移入左侧导航设置，作为独立顶层视图）
+    function switchLinksTab(tab) {
+        state.ltab = tab;
+        var panels = { cat: $('ltab-cat'), tabs: $('ltab-tabs'), quick: $('ltab-quick') };
+        Object.keys(panels).forEach(function (k) {
+            if (panels[k]) panels[k].style.display = (k === tab) ? 'block' : 'none';
+        });
+        document.querySelectorAll('#links-subtabs .links-subtab').forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-ltab') === tab);
+        });
+        if (tab === 'tabs') renderSideTabs();
+        if (tab === 'quick') renderSideQuick();
     }
 
     function renderTable() {
@@ -265,6 +289,8 @@
                     '<td data-label="选择"><input type="checkbox" class="row-select" data-key="' + escapeHtml(key) + '" ' + checked + '></td>' +
                     '<td data-label="名称"><span class="drag-handle" title="拖拽排序"><i class="fas fa-grip-vertical"></i></span> ' + escapeHtml(name) + '</td>' +
                     '<td data-label="地址"><a class="link-url" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(url) + '</a></td>' +
+                    '<td data-label="用户名">' + (item.luser ? '<span class="cred-user" title="登录用户名">' + escapeHtml(item.luser) + '</span>' : '<span class="cred-empty">—</span>') + '</td>' +
+                    '<td data-label="密码">' + (item.lpass ? '<span class="cred-pass" title="登录密码（已设置，点击编辑可修改）"><i class="fas fa-key"></i> ••••</span>' : '<span class="cred-empty">—</span>') + '</td>' +
                     '<td data-label="分类"><span class="cat-tag">' + CAT_NAMES[cat] + '</span></td>' +
                     '<td data-label="标记">' + color + '</td>' +
                     '<td data-label="操作"><div class="row-actions">' +
@@ -350,12 +376,17 @@
         var name = item ? (item.name || '') : '';
         var url = item ? (item.url || '') : '';
         var cls = item ? (item.class || '') : '';
+        var luser = item ? (item.luser || '') : '';
+        var lpass = item ? (item.lpass || '') : '';
         var defCat = isNew ? (state.activeCat === 'all' ? 'recommended' : state.activeCat) : cat;
         return '<tr class="edit-row" data-cat="' + cat + '" data-id="' + escapeHtml(id || '') + '" data-new="' + (isNew ? 1 : 0) + '">' +
             '<td data-label="选择"></td>' +
             '<td data-label="名称"><input class="inline-input" data-f="name" value="' + escapeHtml(name) + '" placeholder="网站名称 *"></td>' +
             '<td data-label="地址"><div class="inline-url-wrap"><input class="inline-input" data-f="url" value="' + escapeHtml(url) + '" placeholder="https://example.com *">' +
-                '<button type="button" class="btn btn-small btn-secondary" data-act="inline-fetch" title="根据网址自动获取名称"><i class="fas fa-magic"></i></button></div></td>' +
+                '<button type="button" class="btn btn-small btn-secondary" data-act="inline-fetch" title="根据网址自动获取名称"><i class="fas fa-magic"></i></button></div>' +
+                '<div class="inline-dup-warn" data-dup-warn style="display:none;"></div></td>' +
+            '<td data-label="用户名"><input class="inline-input" data-f="luser" value="' + escapeHtml(luser) + '" placeholder="登录用户名（可空）"></td>' +
+            '<td data-label="密码"><input class="inline-input" data-f="lpass" value="' + escapeHtml(lpass) + '" placeholder="登录密码（可空）"></td>' +
             '<td data-label="分类"><select class="inline-select" data-f="cat">' + catOptions(defCat) + '</select></td>' +
             '<td data-label="标记"><select class="inline-select" data-f="class">' + colorOptions(cls) + '</select></td>' +
             '<td data-label="操作"><div class="row-actions">' +
@@ -365,8 +396,9 @@
         '</tr>';
     }
 
-    // 内联保存（新增或编辑）
-    function saveInlineRow(tr) {
+    // 内联提交（新增或编辑）；opts.silent=true 时不弹「保存成功」提示（用于自动保存）
+    function commitInlineRow(tr, opts) {
+        opts = opts || {};
         var cat = tr.getAttribute('data-cat');
         var id = tr.getAttribute('data-id');
         var isNew = tr.getAttribute('data-new') === '1';
@@ -374,20 +406,28 @@
         var urlEl = tr.querySelector('[data-f="url"]');
         var catEl = tr.querySelector('[data-f="cat"]');
         var clsEl = tr.querySelector('[data-f="class"]');
+        var luserEl = tr.querySelector('[data-f="luser"]');
+        var lpassEl = tr.querySelector('[data-f="lpass"]');
         var name = nameEl.value.trim();
         var url = urlEl.value.trim();
         var newCat = catEl.value;
         var color = clsEl.value;
-        if (!name || !url) { notify('请填写名称和地址', 'warning'); return; }
-        if (!/^https?:\/\//i.test(url)) { notify('地址需以 http:// 或 https:// 开头', 'warning'); return; }
+        var luser = luserEl ? luserEl.value.trim() : '';
+        var lpass = lpassEl ? lpassEl.value : '';
+        if (!name || !url) { if (!opts.silent) notify('请填写名称和地址', 'warning'); return false; }
+        if (!/^https?:\/\//i.test(url)) { if (!opts.silent) notify('地址需以 http:// 或 https:// 开头', 'warning'); return false; }
         if (isNew) {
             var item = { id: genId(newCat), name: name, url: url, class: color };
+            if (luser) item.luser = luser;
+            if (lpass) item.lpass = lpass;
             if (!Array.isArray(state.data[newCat])) state.data[newCat] = [];
             state.data[newCat].unshift(item);
         } else {
             var it = findItem(cat, id);
-            if (!it) { notify('未找到该项', 'error'); return; }
+            if (!it) { if (!opts.silent) notify('未找到该项', 'error'); return false; }
             it.name = name; it.url = url; it.class = color;
+            if (luser) it.luser = luser; else delete it.luser;
+            if (lpass) it.lpass = lpass; else delete it.lpass;
             if (cat !== newCat) {
                 state.data[cat] = (state.data[cat] || []).filter(function (x) { return (x.id || '') !== id; });
                 if (!Array.isArray(state.data[newCat])) state.data[newCat] = [];
@@ -395,8 +435,21 @@
             }
         }
         state.editRow = null;
+        if (opts.silent) {
+            // 自动保存：静默提交，失败再回退为可见提示
+            Api.saveLinks(state.data).then(function (r) {
+                if (r.status === 200) { renderStats(); renderTable(); }
+                else if (r.status === 401) { notify('登录已失效，请重新登录', 'error'); setTimeout(showLogin, 800); }
+                else notify('保存失败：' + ((r.data && r.data.error) || r.status), 'error');
+            });
+            return true;
+        }
         persist().then(function (ok) { if (ok) { renderStats(); renderTable(); } });
+        return true;
     }
+
+    // 内联保存（点「保存」按钮时调用）
+    function saveInlineRow(tr) { return commitInlineRow(tr, {}); }
 
     // 内联「自动获取」：根据网址补全名称
     function fetchInlineMeta(tr, btn) {
@@ -477,6 +530,13 @@
         // 主题
         $('admin-theme').addEventListener('click', toggleTheme);
 
+        // 检查更新（手动）
+        var cbtn = $('admin-check-update');
+        if (cbtn) cbtn.addEventListener('click', manualCheckUpdate);
+        // 关闭更新横幅
+        var cclose = $('update-banner-close');
+        if (cclose) cclose.addEventListener('click', function () { var b = $('update-banner'); if (b) b.style.display = 'none'; });
+
         // 搜索
         $('admin-search').addEventListener('input', renderTable);
 
@@ -485,24 +545,43 @@
             var li = e.target.closest('.sidebar-cat');
             if (!li) return;
             state.activeCat = li.getAttribute('data-cat');
-            state.activeNav = null;
+            state.activeNav = 'links';
             state.editRow = null; // 切换分类时取消内联编辑
             switchView('links');
+            switchLinksTab('cat');
+            syncSidebarActive();
             renderSidebar();
             renderTable();
         });
 
-        // 左侧导航设置点击（切到对应编辑视图）
+        // 左侧导航设置点击（切到对应顶层视图）
         $('sidebar-nav').addEventListener('click', function (e) {
             var li = e.target.closest('.sidebar-nav-item');
             if (!li) return;
             state.activeNav = li.getAttribute('data-nav');
             state.editRow = null; // 离开网址视图时取消内联编辑
-            switchView(state.activeNav === 'tabs' ? 'tabs' : 'quick');
             syncSidebarActive();
-            renderSideTabs();
-            renderSideQuick();
+            if (state.activeNav === 'links') {
+                switchView('links');
+                switchLinksTab('cat');
+                renderStats();
+                renderTable();
+            } else if (state.activeNav === 'tabs') {
+                switchView('tabs');
+                renderSideTabs();
+            } else if (state.activeNav === 'quick') {
+                switchView('quick');
+                renderSideQuick();
+            } else if (state.activeNav === 'pages') {
+                switchView('pages');
+                renderPages();
+            } else if (state.activeNav === 'help') {
+                switchView('help');
+            }
         });
+
+        // 主标签页导航 / 底部快捷访问 已移入左侧导航设置（顶层视图 nav-tabs-view / nav-quick-view）
+        bindPages();
 
         // 侧栏分类过滤
         $('sidebar-search').addEventListener('input', function () {
@@ -518,6 +597,7 @@
         $('admin-add').addEventListener('click', function () {
             state.editRow = { isNew: true, cat: state.activeCat === 'all' ? 'recommended' : state.activeCat };
             switchView('links');
+            switchLinksTab('cat');
             renderTable();
         });
 
@@ -546,15 +626,48 @@
             e.target.value = '';
         });
 
-        // 重置
-        $('admin-reset').addEventListener('click', function () {
-            if (confirm('确定要将所有链接重置为系统默认数据吗？此操作不可撤销。')) {
+        // 重置（二次点击确认，3 秒超时自动恢复，避免误操作）
+        (function bindResetConfirm() {
+            var resetBtn = $('admin-reset');
+            var resetArmed = false;
+            var resetTimer = null;
+            var resetOriginalHTML = resetBtn.innerHTML;
+
+            function restoreResetBtn() {
+                resetArmed = false;
+                if (resetTimer) { clearTimeout(resetTimer); resetTimer = null; }
+                resetBtn.classList.remove('reset-armed');
+                resetBtn.innerHTML = resetOriginalHTML;
+            }
+
+            resetBtn.addEventListener('click', function () {
+                if (!resetArmed) {
+                    resetArmed = true;
+                    resetOriginalHTML = resetBtn.innerHTML;
+                    resetBtn.classList.add('reset-armed');
+                    resetBtn.innerHTML = '<span class="btn-text">⚠️ 再次点击确认清空/重置</span>';
+                    resetTimer = setTimeout(function () {
+                        restoreResetBtn();
+                    }, 3000);
+                    return;
+                }
+
+                // 第二次点击：真正执行重置
+                clearTimeout(resetTimer);
+                resetTimer = null;
+                resetBtn.classList.remove('reset-armed');
+                resetBtn.innerHTML = '<span class="btn-text"><i class="fas fa-spinner fa-spin"></i> 重置中...</span>';
+
                 Api.reset().then(function (r) {
                     if (r.status === 200) { notify('已重置为默认数据', 'success'); loadAll(); }
                     else notify('重置失败', 'error');
+                }).catch(function () {
+                    notify('重置请求失败，请稍后重试', 'error');
+                }).finally(function () {
+                    restoreResetBtn();
                 });
-            }
-        });
+            });
+        })();
 
         // 表格内编辑/删除/内联保存（事件委托，不再弹窗）
         $('admin-rows').addEventListener('click', function (e) {
@@ -581,6 +694,86 @@
             } else if (act === 'inline-fetch') {
                 fetchInlineMeta(tr, btn);
             }
+        });
+
+        // ---------- 网址自动保存 + 查重提示 ----------
+        function normalizeUrl(u) {
+            u = (u || '').trim();
+            if (!u) return '';
+            try {
+                var url = new URL(u);
+                var host = url.host.toLowerCase();
+                var path = url.pathname.replace(/\/+$/, '');
+                return host + path + (url.search || '');
+            } catch (e) {
+                return u.toLowerCase().replace(/\/+$/, '');
+            }
+        }
+        function findDuplicateUrl(url, excludeId) {
+            var target = normalizeUrl(url);
+            if (!target) return null;
+            for (var ci = 0; ci < CAT_KEYS.length; ci++) {
+                var arr = state.data[CAT_KEYS[ci]] || [];
+                for (var i = 0; i < arr.length; i++) {
+                    var it = arr[i];
+                    if ((it.id || '') === excludeId) continue;
+                    if (normalizeUrl(it.url || '') === target) {
+                        return { cat: CAT_KEYS[ci], name: it.name || it.url };
+                    }
+                }
+            }
+            return null;
+        }
+        function showDupWarning(tr) {
+            if (!tr || !tr.isConnected) return;
+            var urlEl = tr.querySelector('[data-f=url]');
+            var warn = tr.querySelector('[data-dup-warn]');
+            if (!urlEl || !warn) return;
+            var url = urlEl.value.trim();
+            if (!/^https?:\/\//i.test(url)) { warn.style.display = 'none'; return; }
+            var dup = findDuplicateUrl(url, tr.getAttribute('data-id'));
+            if (dup) {
+                warn.textContent = '⚠ 该网址已存在（' + CAT_NAMES[dup.cat] + ' / ' + (dup.name || '') + '），请确认是否重复';
+                warn.style.display = 'block';
+            } else {
+                warn.style.display = 'none';
+            }
+        }
+        function autoSaveRow(tr) {
+            if (!tr || !tr.isConnected) return;
+            if (!tr.classList.contains('edit-row')) return;
+            var nameEl = tr.querySelector('[data-f=name]');
+            var urlEl = tr.querySelector('[data-f=url]');
+            var name = (nameEl ? nameEl.value : '').trim();
+            var url = (urlEl ? urlEl.value : '').trim();
+            if (!name || !url) return;
+            if (!/^https?:\/\//i.test(url)) return;
+            if (findDuplicateUrl(url, tr.getAttribute('data-id'))) return;
+            commitInlineRow(tr, { silent: true });
+            notify('已自动保存', 'success');
+        }
+
+        var _dupTimer = null, _autoTimer = null;
+        $('admin-rows').addEventListener('input', function (e) {
+            var f = e.target.getAttribute && e.target.getAttribute('data-f');
+            if (f !== 'url' && f !== 'name' && f !== 'luser' && f !== 'lpass') return;
+            var tr = e.target.closest('tr.edit-row');
+            if (!tr) return;
+            if (f === 'url') {
+                clearTimeout(_dupTimer);
+                _dupTimer = setTimeout(function () { showDupWarning(tr); }, 500);
+            }
+            clearTimeout(_autoTimer);
+            _autoTimer = setTimeout(function () { autoSaveRow(tr); }, 1500);
+        });
+        $('admin-rows').addEventListener('focusout', function (e) {
+            var f = e.target.getAttribute && e.target.getAttribute('data-f');
+            if (f !== 'url' && f !== 'name' && f !== 'luser' && f !== 'lpass') return;
+            var tr = e.target.closest('tr.edit-row');
+            if (!tr) return;
+            var rel = e.relatedTarget;
+            if (rel && tr.contains(rel)) return;
+            setTimeout(function () { autoSaveRow(tr); }, 200);
         });
 
         // 行选择
@@ -900,7 +1093,7 @@
             });
         }
 
-        // ---- 站点外观：页脚功能链接编辑器已取消（V3.1.3 起由「整页页脚 HTML」接管整个页脚） ----
+        // ---- 站点外观：页脚功能链接编辑器已取消（V3.1.6 起由「整页页脚 HTML」接管整个页脚） ----
 
         // 左侧：添加快捷访问
         $('nav-add-quick').addEventListener('click', function () {
@@ -936,6 +1129,12 @@
             appearanceState.headerHtml = $('set-header-html').value;
             appearanceState.footerHtml = $('set-footer-html').value;
             appearanceState.customCss = $('set-custom-css').value;
+            appearanceState.bgEffect = $('set-bg-effect').value;
+            appearanceState.bgTarget = $('set-bg-target').value;
+            appearanceState.searchEngine = $('set-search-engine').value;
+            appearanceState.splash = $('set-splash').checked;
+            appearanceState.weatherCode = $('set-weather-code').value;
+            appearanceState.weatherCity = $('set-weather-city').value;
             Api.saveSite(appearanceState).then(function (r) {
                 if (r.status === 200) {
                     closeAppearanceModal();
@@ -1262,8 +1461,13 @@
         ];
     }
 
+    // 出厂默认天气区代码（V3.2.33 起留空 → 前台启用内置天气组件；填了代码则优先使用自定义代码）
+    var DEFAULT_WEATHER_CODE = '';
+    // 内置天气组件默认城市（与后端 defaultSite、前端 DEFAULT_SITE 对齐）
+    var DEFAULT_WEATHER_CITY = '广州';
+
     function normalizeAppearance(s) {
-        var def = { greeting: { enabled: true, mode: 'auto', text: '', segments: defaultGreetingSegments() }, headerHtml: '', footerHtml: '', customCss: '', footerLinks: [], quickAccess: [], tabs: [], quickSearches: [], frontendLogo: { hasCustom: false, ext: '' }, backendLogo: { hasCustom: false, ext: '' } };
+        var def = { greeting: { enabled: true, mode: 'auto', text: '', segments: defaultGreetingSegments() }, headerHtml: '', footerHtml: '', customCss: '', footerLinks: [], quickAccess: [ { text: '路由器', href: 'http://192.168.1.1/', icon: 'fas fa-wifi', target: '_blank' }, { text: '海纳思', href: 'http://192.168.1.3', icon: 'fas fa-server', target: '_blank' }, { text: 'FNOSNAS', href: 'https://fnos.net/dznasos', icon: 'fas fa-server', target: '_blank' }, { text: 'NSA319服务器', href: 'http://192.168.1.119:91/cgi-bin/', icon: 'fas fa-server', target: '_blank' }, { text: '网络测速', href: '/pages/TEST.html', icon: 'fas fa-tachometer-alt', target: '_blank' }, { text: '税务计算器', href: '/pages/customs.html', icon: 'fas fa-calculator', target: '_blank' }, { text: '齿轮计算', href: '131.html', icon: 'fas fa-calculator', target: '_blank' }, { text: '理财计算', href: '/pages/zlcalculator.html', icon: 'fas fa-chart-line', target: '_blank' }, { text: '多功能计算器', href: '/pages/calculator.html', icon: 'fas fa-calculator', target: '_blank' }, { text: '齿轮参数', href: '/pages/calculator2.html', icon: 'fas fa-cogs', target: '_blank' }, { text: '材料价格', href: '/pages/Material.html', icon: 'fas fa-boxes', target: '_blank' }, { text: '设备解锁', href: 'Unlock.html', icon: 'fas fa-unlock', target: '_blank' }, { text: 'HCdzai', href: 'http://192.168.1.7:5666/', icon: 'fas fa-server', target: '_blank' }, { text: 'FnDzAi', href: 'http://192.168.1.6:5666/', icon: 'fas fa-server', target: '_blank' }, { text: '工作NAS', href: 'http://192.168.1.9:5666/', icon: 'fas fa-hdd', target: '_blank' }, { text: 'KMS激活', href: 'http://192.168.1.4/kms.html', icon: 'fas fa-server', target: '_blank' } ], tabs: [], quickSearches: [], frontendLogo: { hasCustom: false, ext: '' }, backendLogo: { hasCustom: false, ext: '' }, bgEffect: 'particles', bgTarget: 'frontend', searchEngine: 'baidu', weatherCode: DEFAULT_WEATHER_CODE, weatherCity: DEFAULT_WEATHER_CITY, splash: true };
         if (!s || typeof s !== 'object') return def;
         return {
             greeting: Object.assign({ enabled: true, mode: 'auto', text: '', segments: defaultGreetingSegments() }, s.greeting || {}),
@@ -1275,7 +1479,13 @@
             tabs: Array.isArray(s.tabs) ? s.tabs : [],
             quickSearches: Array.isArray(s.quickSearches) ? s.quickSearches.map(function (it) { return { text: String((it && it.text) || '').trim().slice(0, 20), url: String((it && it.url) || '').trim().slice(0, 500) }; }).filter(function (it) { return it.text; }).slice(0, 30) : [],
             frontendLogo: (s.frontendLogo && typeof s.frontendLogo === 'object') ? { hasCustom: !!s.frontendLogo.hasCustom, ext: String(s.frontendLogo.ext || '') } : { hasCustom: false, ext: '' },
-            backendLogo: (s.backendLogo && typeof s.backendLogo === 'object') ? { hasCustom: !!s.backendLogo.hasCustom, ext: String(s.backendLogo.ext || '') } : { hasCustom: false, ext: '' }
+            backendLogo: (s.backendLogo && typeof s.backendLogo === 'object') ? { hasCustom: !!s.backendLogo.hasCustom, ext: String(s.backendLogo.ext || '') } : { hasCustom: false, ext: '' },
+            bgEffect: (s.bgEffect && ['none', 'particles', 'glow', 'aurora'].indexOf(s.bgEffect) >= 0) ? s.bgEffect : 'particles',
+            bgTarget: (s.bgTarget && ['frontend', 'backend', 'both'].indexOf(s.bgTarget) >= 0) ? s.bgTarget : 'frontend',
+            searchEngine: (s.searchEngine && ['baidu', 'google', 'bing', '360', 'searxng'].indexOf(s.searchEngine) >= 0) ? s.searchEngine : 'baidu',
+            weatherCode: typeof s.weatherCode === 'string' ? s.weatherCode : DEFAULT_WEATHER_CODE,
+            weatherCity: (typeof s.weatherCity === 'string' && s.weatherCity.trim()) ? s.weatherCity.trim() : DEFAULT_WEATHER_CITY,
+            splash: (typeof s.splash === 'boolean') ? s.splash : true
         };
     }
 
@@ -1308,6 +1518,12 @@
         $('set-header-html').value = appearanceState.headerHtml || '';
         $('set-footer-html').value = appearanceState.footerHtml || '';
         $('set-custom-css').value = appearanceState.customCss || '';
+        $('set-bg-effect').value = appearanceState.bgEffect || 'particles';
+        $('set-bg-target').value = appearanceState.bgTarget || 'frontend';
+        $('set-search-engine').value = appearanceState.searchEngine || 'baidu';
+        $('set-splash').checked = appearanceState.splash !== false;
+        $('set-weather-code').value = appearanceState.weatherCode || '';
+        $('set-weather-city').value = appearanceState.weatherCity || DEFAULT_WEATHER_CITY;
         $('appearance-error').textContent = '';
         renderGreetingSegments();
         renderLogoPreviews();
@@ -1393,11 +1609,18 @@
         if (!s) return;
         var ch = $('custom-header'); if (ch) ch.innerHTML = s.headerHtml || '';
         var cf = $('custom-footer'); if (cf) cf.innerHTML = s.footerHtml || '';
+        // 锁定后台页脚版本号：从 APP_VERSION 注入（与前端一致），不在 footer HTML 写死
+        var fvAdmin = cf ? (cf.querySelector('#footer-version') || cf.querySelector('.version')) : null;
+        if (fvAdmin) fvAdmin.textContent = 'V' + APP_VERSION;
         var styleEl = $('custom-css');
         if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'custom-css'; document.head.appendChild(styleEl); }
         styleEl.textContent = s.customCss || '';
         // 后台 LOGO：登录窗 + 应用栏（hasCustom → /api/site/logo/backend；失败回退默认）
         applyAdminLogo(s);
+        // 动态背景：按后台「外观」设置应用（后台管理页）
+        if (window.QiYiBackground) {
+            QiYiBackground.apply({ effect: (s.bgEffect || 'particles'), target: (s.bgTarget || 'frontend'), isBackend: true });
+        }
     }
 
     // ==================== LOGO 设计 ====================
@@ -1453,17 +1676,311 @@
         container.innerHTML = html;
     }
 
+    // ==================== 自建页面 ====================
+    function pageFmtBytes(n) {
+        n = Number(n) || 0;
+        if (n < 1024) return n + ' B';
+        if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+        return (n / 1024 / 1024).toFixed(2) + ' MB';
+    }
+
+    function renderPages() {
+        var listEl = $('pages-list'), emptyEl = $('pages-empty');
+        if (!listEl) return;
+        listEl.innerHTML = '<div class="admin-empty"><i class="fas fa-spinner fa-spin"></i><p>加载中…</p></div>';
+        Api.pages().then(function (r) {
+            if (!r || r.status !== 200 || !r.data || !Array.isArray(r.data.pages)) {
+                listEl.innerHTML = ''; if (emptyEl) emptyEl.style.display = 'block'; return;
+            }
+            var pages = r.data.pages;
+            if (!pages.length) { listEl.innerHTML = ''; if (emptyEl) emptyEl.style.display = 'block'; return; }
+            if (emptyEl) emptyEl.style.display = 'none';
+            var html = '';
+            pages.forEach(function (p) {
+                var enc = encodeURIComponent(p.name);
+                var url = '/pages/' + enc;
+                var mtime = p.mtime ? new Date(p.mtime).toLocaleString() : '';
+                html += '<div class="page-card" data-name="' + escapeHtml(p.name) + '">'
+                    + '<div class="page-card-icon"><i class="fas fa-file-code"></i></div>'
+                    + '<div class="page-card-body">'
+                    + '<div class="page-card-title">' + escapeHtml(p.name) + '</div>'
+                    + '<div class="page-card-meta">' + pageFmtBytes(p.size) + (mtime ? ' · ' + escapeHtml(mtime) : '') + '</div>'
+                    + '<div class="page-card-url"><a href="' + url + '" target="_blank" rel="noopener">' + url + '</a></div>'
+                    + '</div>'
+                    + '<div class="page-card-actions">'
+                    + '<button type="button" class="btn btn-small btn-secondary" data-act="open" data-name="' + escapeHtml(p.name) + '" title="编辑"><i class="fas fa-edit"></i></button>'
+                    + '<a class="btn btn-small btn-secondary" href="' + url + '" target="_blank" rel="noopener" title="新窗口打开"><i class="fas fa-external-link-alt"></i></a>'
+                    + '<button type="button" class="btn btn-small btn-secondary" data-act="quick" data-name="' + escapeHtml(p.name) + '" title="加入快捷访问"><i class="fas fa-bolt"></i></button>'
+                    + '<button type="button" class="btn btn-small btn-danger" data-act="del" data-name="' + escapeHtml(p.name) + '" title="删除"><i class="fas fa-trash"></i></button>'
+                    + '</div></div>';
+            });
+            listEl.innerHTML = html;
+        }).catch(function () {
+            listEl.innerHTML = ''; if (emptyEl) emptyEl.style.display = 'block';
+        });
+    }
+
+    function pageEditorReset() {
+        pageEditorUpdateUrl();
+        var prev = $('page-editor-preview');
+        if (prev) prev.srcdoc = '';
+        var err = $('page-editor-error'); if (err) err.textContent = '';
+        var nm = $('page-editor-name'); if (nm) nm.disabled = false;
+    }
+
+    function pageEditorUpdateUrl() {
+        var nm = ($('page-editor-name') ? $('page-editor-name').value : '').trim();
+        var urlEl = $('page-editor-url');
+        if (urlEl) urlEl.textContent = nm ?
+            ('访问地址：/pages/' + encodeURIComponent(nm)) : '请先填写文件名（如 我的笔记.html）';
+    }
+
+    function pageEditorUpdatePreview() {
+        var prev = $('page-editor-preview');
+        var code = $('page-editor-code') ? $('page-editor-code').value : '';
+        if (prev) prev.srcdoc = code || '';
+    }
+
+    function pageEditorOpen(existingName) {
+        var nameInput = $('page-editor-name'), codeEl = $('page-editor-code');
+        pageEditorReset();
+        if (existingName) {
+            state.pageEditing = { name: existingName, isNew: false };
+            if (nameInput) { nameInput.value = existingName; nameInput.disabled = true; }
+            if (codeEl) codeEl.value = '';
+            Api.getPage(existingName).then(function (r) {
+                if (r.status === 200 && r.data) {
+                    if (codeEl) codeEl.value = (r.data.content != null) ? r.data.content : '';
+                } else {
+                    var err = $('page-editor-error'); if (err) err.textContent = '读取页面失败';
+                }
+                pageEditorUpdateUrl(); pageEditorUpdatePreview();
+            }).catch(function () {
+                var err = $('page-editor-error'); if (err) err.textContent = '读取页面失败';
+            });
+        } else {
+            state.pageEditing = { name: '', isNew: true };
+            if (nameInput) { nameInput.value = ''; nameInput.disabled = false; }
+            if (codeEl) codeEl.value = '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n<title>我的页面</title>\n<style>\n  body{font-family:system-ui,"Microsoft YaHei",sans-serif;padding:24px;color:#222;}\n  h2{color:#2b6cb0;}\n</style>\n</head>\n<body>\n  <h2>你好，这是自建页面</h2>\n  <p>在这里编写你的内容，左侧改完右侧实时预览，保存后可通过 /pages/文件名 直接访问。</p>\n</body>\n</html>';
+        }
+        pageEditorUpdateUrl();
+        pageEditorUpdatePreview();
+        var modal = $('page-editor-modal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function pageEditorClose() {
+        var modal = $('page-editor-modal');
+        if (modal) modal.style.display = 'none';
+        state.pageEditing = { name: '', isNew: true };
+    }
+
+    function pageEditorSave() {
+        var codeEl = $('page-editor-code'), errEl = $('page-editor-error');
+        var content = (codeEl ? codeEl.value : '');
+        if (errEl) errEl.textContent = '';
+        if (state.pageEditing && !state.pageEditing.isNew) {
+            var origName = state.pageEditing.name;
+            Api.updatePage(origName, content).then(function (r) {
+                if (r.status === 200) {
+                    notify('已保存：' + origName, 'success');
+                    pageEditorClose(); renderPages();
+                } else {
+                    if (errEl) errEl.textContent = (r.data && r.data.error) ? r.data.error : '保存失败';
+                }
+            }).catch(function () { if (errEl) errEl.textContent = '保存失败，请重试'; });
+        } else {
+            var name = ($('page-editor-name') ? $('page-editor-name').value : '').trim();
+            if (!/^[\u4e00-\u9fa5A-Za-z0-9_\-]{1,60}\.html?$/i.test(name)) {
+                if (errEl) errEl.textContent = '文件名非法：仅允许中文/字母/数字/下划线/连字符，扩展名 .html 或 .htm，最长 60 字';
+                return;
+            }
+            Api.createPage(name, content).then(function (r) {
+                if (r.status === 200) {
+                    notify('已创建：' + name, 'success');
+                    pageEditorClose(); renderPages();
+                } else if (r.status === 409) {
+                    if (errEl) errEl.textContent = '同名页面已存在，请换名或先删除';
+                } else {
+                    if (errEl) errEl.textContent = (r.data && r.data.error) ? r.data.error : '创建失败';
+                }
+            }).catch(function () { if (errEl) errEl.textContent = '创建失败，请重试'; });
+        }
+    }
+
+    function pageDelete(name) {
+        if (!confirm('确定删除页面「' + name + '」？此操作不可恢复。')) return;
+        Api.deletePage(name).then(function (r) {
+            if (r.status === 200) { notify('已删除：' + name, 'success'); renderPages(); }
+            else { notify((r.data && r.data.error) ? r.data.error : '删除失败', 'error'); }
+        }).catch(function () { notify('删除失败，请重试', 'error'); });
+    }
+
+    function pageAddToQuick(name) {
+        var item = { text: name.replace(/\.html?$/i, ''), href: '/pages/' + encodeURIComponent(name), icon: 'fas fa-file-code', target: '_blank' };
+        // 先拉取服务器端当前 quickAccess，避免覆盖用户已有的快捷访问项
+        Api.getSettings().then(function (r) {
+            var site = (r.status === 200 && r.data && r.data.site) ? r.data.site : {};
+            var current = Array.isArray(site.quickAccess) ? site.quickAccess : [];
+            var exists = current.some(function (x) { return x && x.href === item.href; });
+            if (exists) { notify('「' + name + '」已在快捷访问中', 'info'); return; }
+            var next = current.concat([item]);
+            Api.saveSite({ site: { quickAccess: next } }).then(function (rr) {
+                if (rr.status === 200) {
+                    if (typeof appearanceState !== 'undefined' && appearanceState) appearanceState.quickAccess = next;
+                    notify('已加入前台「快捷访问」：' + name, 'success');
+                } else {
+                    notify((rr.data && rr.data.error) ? rr.data.error : '加入快捷访问失败', 'error');
+                }
+            }).catch(function () { notify('加入快捷访问失败，请重试', 'error'); });
+        }).catch(function () { notify('读取设置失败，请重试', 'error'); });
+    }
+
+    function bindPages() {
+        var newBtn = $('page-new'), uploadBtn = $('page-upload'), uploadFile = $('page-upload-file'), refreshBtn = $('page-refresh');
+        var nameInput = $('page-editor-name'), codeEl = $('page-editor-code');
+        var saveBtn = $('page-editor-save'), cancelBtn = $('page-editor-cancel'), closeBtn = $('page-editor-close');
+
+        if (newBtn) newBtn.addEventListener('click', function () { pageEditorOpen(); });
+        if (refreshBtn) refreshBtn.addEventListener('click', function () { renderPages(); });
+        if (uploadBtn && uploadFile) {
+            uploadBtn.addEventListener('click', function () { uploadFile.click(); });
+            uploadFile.addEventListener('change', function () {
+                var f = uploadFile.files && uploadFile.files[0];
+                if (!f) return;
+                var reader = new FileReader();
+                reader.onload = function () {
+                    var nm = f.name.replace(/[^\u4e00-\u9fa5A-Za-z0-9_\-\.]/g, '_');
+                    if (!/\.html?$/i.test(nm)) nm += '.html';
+                    if (nameInput) { nameInput.value = nm; nameInput.disabled = false; }
+                    if (codeEl) codeEl.value = String(reader.result || '');
+                    pageEditorUpdateUrl();
+                    pageEditorUpdatePreview();
+                    var modal = $('page-editor-modal'); if (modal) modal.style.display = 'flex';
+                    uploadFile.value = '';
+                };
+                reader.readAsText(f, 'utf-8');
+            });
+        }
+        if (nameInput) nameInput.addEventListener('input', pageEditorUpdateUrl);
+        if (codeEl) codeEl.addEventListener('input', pageEditorUpdatePreview);
+        if (saveBtn) saveBtn.addEventListener('click', pageEditorSave);
+        if (cancelBtn) cancelBtn.addEventListener('click', pageEditorClose);
+        if (closeBtn) closeBtn.addEventListener('click', pageEditorClose);
+
+        var listEl = $('pages-list');
+        if (listEl) {
+            listEl.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-act]');
+                if (!btn) return;
+                var act = btn.getAttribute('data-act');
+                var nm = btn.getAttribute('data-name');
+                if (act === 'open') pageEditorOpen(nm);
+                else if (act === 'quick') pageAddToQuick(nm);
+                else if (act === 'del') pageDelete(nm);
+            });
+        }
+
+        var modal = $('page-editor-modal');
+        if (modal) {
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) pageEditorClose();
+            });
+        }
+
+        // ============ 数据备份 / 还原（升级前保护数据） ============
+        var backupBtn = $('data-backup'), restoreBtn = $('data-restore'), restoreFile = $('data-restore-file');
+        var statusEl = $('backup-status');
+        function setBackupStatus(msg, type) {
+            if (!statusEl) return;
+            statusEl.textContent = msg || '';
+            statusEl.className = 'backup-status' + (type ? ' backup-status-' + type : '');
+        }
+        if (backupBtn) backupBtn.addEventListener('click', function () {
+            setBackupStatus('正在生成备份…', 'info');
+            Api.backup().then(function () {
+                setBackupStatus('备份已下载（含配置 / 网址 / 自建页面 / LOGO / 图标）', 'success');
+            }).catch(function (e) { setBackupStatus('备份失败：' + (e && e.message ? e.message : e), 'error'); });
+        });
+        if (restoreBtn && restoreFile) {
+            restoreBtn.addEventListener('click', function () { restoreFile.click(); });
+            restoreFile.addEventListener('change', function () {
+                var f = restoreFile.files && restoreFile.files[0];
+                if (!f) return;
+                if (!window.confirm('确定要用所选备份覆盖当前数据吗？\n覆盖前系统会自动备份当前数据（在 backups/ 目录），可随时回滚。')) {
+                    restoreFile.value = ''; return;
+                }
+                setBackupStatus('正在还原…', 'info');
+                Api.restore(f).then(function (r) {
+                    if (r.status === 200) {
+                        setBackupStatus('还原成功，已恢复 ' + (r.data && r.data.restored) + ' 个文件。建议刷新页面查看最新数据。', 'success');
+                        notify('数据还原成功', 'success');
+                    } else {
+                        setBackupStatus('还原失败：' + ((r.data && r.data.error) || ('HTTP ' + r.status)), 'error');
+                        notify('还原失败', 'error');
+                    }
+                    renderPages();
+                }).catch(function (e) { setBackupStatus('还原失败：' + (e && e.message ? e.message : e), 'error'); });
+                restoreFile.value = '';
+            });
+        }
+    }
+
     // ==================== 启动 ====================
+    // ==================== 版本更新检查（后台"有更新版"提示） ====================
+    function renderUpdateBanner(d) {
+        var banner = $('update-banner');
+        if (!banner || !d || !d.available) { if (banner) banner.style.display = 'none'; return; }
+        var t = $('update-banner-text');
+        if (t) t.textContent = '发现新版本 V' + d.latest + '（当前 V' + d.current + '）';
+        var link = $('update-banner-link');
+        if (link) {
+            if (d.url) { link.href = d.url; link.style.display = ''; }
+            else link.style.display = 'none';
+        }
+        banner.style.display = 'flex';
+    }
+
+    function checkUpdate() {
+        if (typeof Api.updateCheck !== 'function') return;
+        Api.updateCheck().then(function (r) {
+            if (r.status === 200 && r.data) renderUpdateBanner(r.data);
+        }).catch(function () { /* 静默：无网络时不打扰 */ });
+    }
+
+    function manualCheckUpdate() {
+        if (typeof Api.updateCheck !== 'function') return;
+        notify('正在检查更新…', 'info');
+        Api.updateCheck().then(function (r) {
+            if (r.status === 200 && r.data) {
+                if (r.data.available) { renderUpdateBanner(r.data); notify('发现新版本 V' + r.data.latest, 'success'); }
+                else if (r.data.enabled) notify('已是最新版本 V' + r.data.current, 'success');
+                else notify('未配置更新源（设置 UPDATE_REPO 后可检查更新）', 'info');
+            } else {
+                notify('检查更新失败', 'error');
+            }
+        }).catch(function () { notify('检查更新失败：无法连接更新源', 'error'); });
+    }
+
     function start() {
-        state.darkMode = localStorage.getItem('qiyiTheme') === 'dark';
+        state.darkMode = localStorage.getItem('qiyiTheme') !== 'light'; // 默认深色主题（deepseek 风格）
         applyTheme();
+        state.activeNav = 'links';
         switchView('links');
+        switchLinksTab('cat');
         bind();
         checkAuth();
+        checkUpdate(); // 进入后台即静默检查一次更新
     }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start);
+
+        // 后台标题版本徽标：由 APP_VERSION 动态注入（与页脚/前端同源，不在 HTML 写死）
+        document.addEventListener('DOMContentLoaded', function () {
+            var av = document.getElementById('app-version');
+            if (av) av.textContent = 'V' + APP_VERSION;
+        });
     } else {
         start();
     }
