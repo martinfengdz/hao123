@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能税务计算器 - 一般纳税人专用</title>
+    <style>
+        :root {
+            --primary: #2f6df6;
+            --primary-dark: #1d5ce0;
+            --secondary: #7209b7;
+            --success: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --border: #dee2e6;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --radius: 12px;
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 15px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px 15px;
+            background: linear-gradient(120deg, #2f6df6, #13b4a6);
+            color: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            transform: rotate(30deg);
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+        }
+        
+        .card-header {
+            padding: 16px 20px;
+            background: linear-gradient(to right, var(--primary), var(--primary-dark));
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .tab {
+            padding: 16px 18px;
+            text-align: center;
+            background-color: #f1f3f9;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--gray);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .tab:hover {
+            background-color: #e9ecef;
+            color: var(--primary);
+        }
+        
+        .tab.active {
+            background-color: white;
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .tab.active::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--primary);
+        }
+        
+        .input-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+
+        /* 输入区语义标题 */
+        .input-grid::before {
+            content: "📝 输入参数";
+            display: flex;
+            align-items: center;
+            grid-column: 1 / -1;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+            padding-bottom: 8px;
+            border-bottom: 2px dashed var(--border);
+        }
+        
+        /* 输入区：白色可填写卡片，与浅蓝结果卡形成对比 */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: var(--transition);
+        }
+
+        /* 输入区卡片 hover 高亮：鼠标移上去边框变蓝、轻微上浮 */
+        .input-group:hover {
+            border-color: #b8c6e0;
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.12);
+            transform: translateY(-1px);
+        }
+        
+        label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        .label-icon {
+            margin-right: 8px;
+            color: var(--primary);
+        }
+        
+        input[type="number"] {
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 16px;
+            transition: var(--transition);
+            background: #ffffff;
+            width: 100%;
+        }
+        
+        input[type="number"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.18);
+            outline: none;
+            background: #ffffff;
+        }
+
+        /* 必填标记：本工具所有输入字段均为必填，统一红色星号提示 */
+        .input-group label::after {
+            content: " *";
+            color: #ef4444;
+            font-weight: 700;
+        }
+        
+        .input-hint {
+            font-size: 13px;
+            color: var(--gray);
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .hint-icon {
+            margin-right: 5px;
+            font-size: 14px;
+        }
+        
+        .result-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        /* 输出区语义标题 */
+        .result-grid::before {
+            content: "📊 计算结果";
+            display: flex;
+            align-items: center;
+            grid-column: 1 / -1;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+            padding-bottom: 8px;
+            border-bottom: 2px dashed var(--border);
+        }
+
+        /* 输出区：浅蓝结果卡片，与白色输入卡形成柔和对比（不刺眼） */
+        .result-item {
+            background: linear-gradient(135deg, #eef4ff 0%, #f0f9ff 100%);
+            padding: 16px;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--primary);
+            transition: var(--transition);
+            color: var(--dark);
+        }
+        
+        .result-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.12);
+        }
+        
+        .result-label {
+            font-size: 14px;
+            color: #475569;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .result-icon {
+            margin-right: 6px;
+            color: var(--primary);
+        }
+        
+        .result-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .highlight-box {
+            background: linear-gradient(to right, #ecfdf5, #f0fdfa);
+            padding: 18px;
+            border-radius: var(--radius);
+            margin-top: 18px;
+            border-left: 4px solid #10b981;
+        }
+        
+        .highlight-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #047857;
+            display: flex;
+            align-items: center;
+        }
+        
+        .highlight-icon {
+            margin-right: 8px;
+        }
+        
+        .highlight-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #047857;
+        }
+        
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(67, 97, 238, 0.4);
+        }
+        
+        /* 次按钮（重置）：白底蓝边蓝字，与主按钮拉开主次层级 */
+        .btn-secondary {
+            background: white;
+            color: #3a86ff;
+            border: 1px solid #2f6df6;
+        }
+        
+        .btn-secondary:hover {
+            background: #eef4ff;
+            color: #2c5fe0;
+        }
+
+        /* 两步走确认态：按钮变红+脉冲，提示"再点一次才执行"，3 秒后自动恢复 */
+        .btn-secondary.confirm-pending {
+            background: #fff4f4;
+            color: #ef4444;
+            border-color: #ef4444;
+            animation: confirmPulse 1.1s ease-in-out infinite;
+        }
+
+        @keyframes confirmPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.40); }
+            50% { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0); }
+        }
+        
+        .tax-info {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: white;
+            padding: 15px;
+            border-radius: var(--radius);
+            margin-top: 18px;
+            box-shadow: var(--shadow);
+        }
+        
+        .info-item {
+            text-align: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: var(--radius);
+        }
+        
+        .info-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 18px;
+            background: white;
+            border-radius: var(--radius);
+            margin-top: 25px;
+            box-shadow: var(--shadow);
+            color: var(--gray);
+            font-size: 14px;
+        }
+        
+        .footer-highlight {
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: var(--primary);
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .calculator-section {
+            display: none;
+        }
+        
+        .calculator-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--success);
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        /* 平板和桌面样式 */
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            
+            header {
+                padding: 25px;
+                margin-bottom: 30px;
+            }
+            
+            h1 {
+                font-size: 32px;
+                margin-bottom: 10px;
+            }
+            
+            .subtitle {
+                font-size: 18px;
+            }
+            
+            .card {
+                margin-bottom: 25px;
+            }
+            
+            .card-header {
+                padding: 20px 25px;
+            }
+            
+            .card-title {
+                font-size: 20px;
+            }
+            
+            .card-body {
+                padding: 25px;
+            }
+            
+            .tabs {
+                flex-direction: row;
+                margin-bottom: 25px;
+            }
+            
+            .tab {
+                flex: 1;
+                padding: 18px 20px;
+            }
+            
+            .input-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .result-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 15px;
+                margin-bottom: 25px;
+            }
+            
+            .actions {
+                flex-direction: row;
+                justify-content: center;
+                gap: 15px;
+            }
+            
+            .btn {
+                width: auto;
+                padding: 14px 28px;
+            }
+            
+            .tax-info {
+                flex-direction: row;
+                justify-content: space-between;
+                gap: 0;
+            }
+            
+            .info-item {
+                flex: 1;
+            }
+            
+            .info-value {
+                font-size: 24px;
+            }
+            
+            .section-title {
+                font-size: 22px;
+                margin-bottom: 20px;
+            }
+        }
+        
+        /* 大屏幕样式 */
+        @media (min-width: 1024px) {
+            .input-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .result-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>智能税务计算器</h1>
+            <p class="subtitle">一般纳税人增值税计算与优化方案</p>
+        </header>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">税务计算模式</div>
+                <div class="badge">定制专业版</div>
+            </div>
+            <div class="card-body">
+                <div class="tabs">
+                    <button class="tab active" data-tab="tab1">
+                        <span class="label-icon">📊</span> 已知销项推测进项
+                    </button>
+                    <button class="tab" data-tab="tab2">
+                        <span class="label-icon">🧮</span> 已知销项与进项
+                    </button>
+                    <button class="tab" data-tab="tab3">
+                        <span class="label-icon">📈</span> 已知进项推测销项
+                    </button>
+                </div>
+                
+                <!-- 第一个计算器：已知销项税推测进项税 -->
+                <section id="tab1" class="calculator-section active">
+                    <h2 class="section-title">已知销项税推测进项税</h2>
+                    <p style="margin-bottom: 20px; color: var(--gray);">增值税类型：一般纳税人</p>
+                    
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label for="salesAmount">
+                                <span class="label-icon">💰</span> 销售价税合计 (元)
+                            </label>
+                            <input type="number" id="salesAmount" placeholder="输入含税销售额">
+                            <div class="input-hint">
+                                <span class="hint-icon">💡</span> 请输入含税销售额
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="taxRate">
+                                <span class="label-icon">📋</span> 实际税率 (%)
+                            </label>
+                            <input type="number" id="taxRate" placeholder="输入实际税率" value="3">
+                            <div class="input-hint">
+                                <span class="hint-icon">⚠️</span> 全年增值税税负率不可低于3个点
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="result-grid">
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📈</span> 主营业务收入(不含税)
+                            </div>
+                            <div class="result-value" id="revenue">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📤</span> 销项税
+                            </div>
+                            <div class="result-value" id="outputTax">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📥</span> 抵扣金额(不含税)
+                            </div>
+                            <div class="result-value" id="deductAmount">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">🧾</span> 抵扣税金(进项税)
+                            </div>
+                            <div class="result-value" id="inputTax">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">⚖️</span> 当期应交税金
+                            </div>
+                            <div class="result-value" id="currentTax">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📊</span> 增值税税负
+                            </div>
+                            <div class="result-value" id="taxBurden">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="highlight-box">
+                        <div class="highlight-title">
+                            <span class="highlight-icon">💰</span> 本月总应交税金
+                        </div>
+                        <div class="highlight-value" id="totalTax">0.00</div>
+                    </div>
+                    
+                    <div class="actions">
+                        <button class="btn btn-primary" id="calculate1">
+                            <span>📊</span> 计算税款
+                        </button>
+                        <button class="btn btn-secondary" id="reset1">
+                            <span>🔄</span> 重置数据
+                        </button>
+                    </div>
+                </section>
+                
+                <!-- 第二个计算器：已知销项税及进项税推本月应交增值税 -->
+                <section id="tab2" class="calculator-section">
+                    <h2 class="section-title">已知销项税及进项税推本月应交增值税</h2>
+                    <p style="margin-bottom: 20px; color: var(--gray);">增值税类型：一般纳税人</p>
+                    
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label for="salesAmount2">
+                                <span class="label-icon">💰</span> 销售价税合计 (元)
+                            </label>
+                            <input type="number" id="salesAmount2" placeholder="输入含税销售额">
+                        </div>
+                        <div class="input-group">
+                            <label for="purchaseAmount2">
+                                <span class="label-icon">🛒</span> 抵扣价税合计 (元)
+                            </label>
+                            <input type="number" id="purchaseAmount2" placeholder="输入抵扣金额">
+                        </div>
+                    </div>
+                    
+                    <div class="result-grid">
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📈</span> 主营业务收入(不含税)
+                            </div>
+                            <div class="result-value" id="revenue2">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📤</span> 销项税
+                            </div>
+                            <div class="result-value" id="outputTax2">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📥</span> 抵扣金额(不含税)
+                            </div>
+                            <div class="result-value" id="deductAmount2">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">🧾</span> 抵扣税金(进项税)
+                            </div>
+                            <div class="result-value" id="inputTax2">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">⚖️</span> 本月应交税金
+                            </div>
+                            <div class="result-value" id="currentTax2">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📊</span> 税负测算
+                            </div>
+                            <div class="result-value" id="taxBurden2">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="highlight-box">
+                        <div class="highlight-title">
+                            <span class="highlight-icon">💰</span> 总税
+                        </div>
+                        <div class="highlight-value" id="totalTax2">0.00</div>
+                    </div>
+                    
+                    <div class="actions">
+                        <button class="btn btn-primary" id="calculate2">
+                            <span>📊</span> 计算税款
+                        </button>
+                        <button class="btn btn-secondary" id="reset2">
+                            <span>🔄</span> 重置数据
+                        </button>
+                    </div>
+                </section>
+                
+                <!-- 第三个计算器：已知进项税推测销项税 -->
+                <section id="tab3" class="calculator-section">
+                    <h2 class="section-title">已知进项税推测销项税</h2>
+                    <p style="margin-bottom: 20px; color: var(--gray);">增值税类型：一般纳税人</p>
+                    
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label for="purchaseAmount3">
+                                <span class="label-icon">🛒</span> 抵扣价税合计 (元)
+                            </label>
+                            <input type="number" id="purchaseAmount3" placeholder="输入抵扣金额">
+                        </div>
+                        <div class="input-group">
+                            <label for="taxRate3">
+                                <span class="label-icon">📋</span> 目标税负率 (%)
+                            </label>
+                            <input type="number" id="taxRate3" placeholder="输入目标税负率" value="3">
+                            <div class="input-hint">
+                                <span class="hint-icon">💡</span> 需小于 13%，否则无法反推
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="result-grid">
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">💰</span> 销售价税合计
+                            </div>
+                            <div class="result-value" id="salesAmount3">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📈</span> 主营业务收入(不含税)
+                            </div>
+                            <div class="result-value" id="revenue3">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📤</span> 销项税
+                            </div>
+                            <div class="result-value" id="outputTax3">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">📥</span> 抵扣金额(不含税)
+                            </div>
+                            <div class="result-value" id="deductAmount3">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">🧾</span> 抵扣税金(进项税)
+                            </div>
+                            <div class="result-value" id="inputTax3">0.00</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">
+                                <span class="result-icon">⚖️</span> 应交税金
+                            </div>
+                            <div class="result-value" id="currentTax3">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="highlight-box">
+                        <div class="highlight-title">
+                            <span class="highlight-icon">💰</span> 本月应交税金
+                        </div>
+                        <div class="highlight-value" id="totalTax3">0.00</div>
+                    </div>
+                    
+                    <div class="actions">
+                        <button class="btn btn-primary" id="calculate3">
+                            <span>📊</span> 计算税款
+                        </button>
+                        <button class="btn btn-secondary" id="reset3">
+                            <span>🔄</span> 重置数据
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </div>
+        
+        <div class="tax-info">
+            <div class="info-item">
+                <div class="info-value">13%</div>
+                <div class="info-label">标准增值税率</div>
+            </div>
+            <div class="info-item">
+                <div class="info-value">3%</div>
+                <div class="info-label">最低税负率</div>
+            </div>
+            <div class="info-item">
+                <div class="info-value">1.13</div>
+                <div class="info-label">价税换算系数</div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>💡 <span class="footer-highlight">温馨提示</span>：请在输入框中输入数据，系统将自动计算相关税费</p>
+            <p>所有计算基于当前税法规定，结果仅供参考</p>
+            <p>🧾 智能税务计算器 v3.1.0 · 更新于 2026-08-20 · 完全离线可用</p>
+        </footer>
+    </div>
+
+    <script>
+        // 标签切换功能
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 移除所有标签和部分的激活状态
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.calculator-section').forEach(s => s.classList.remove('active'));
+                
+                // 添加当前标签和对应部分的激活状态
+                this.classList.add('active');
+                document.getElementById(this.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // 第一个计算器功能
+        document.getElementById('calculate1').addEventListener('click', calculateTax1);
+        document.getElementById('salesAmount').addEventListener('input', calculateTax1);
+        document.getElementById('taxRate').addEventListener('input', calculateTax1);
+        
+        function calculateTax1() {
+            const salesAmount = parseFloat(document.getElementById('salesAmount').value) || 0;
+            const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+            
+            // 计算逻辑
+            const revenue = salesAmount / 1.13;
+            const outputTax = revenue * 0.13;
+            const currentTax = revenue * (taxRate / 100);
+            const inputTax = outputTax - currentTax;
+            const deductAmount = inputTax / 0.13;
+            
+            // 更新显示结果
+            document.getElementById('revenue').textContent = revenue.toFixed(2);
+            document.getElementById('outputTax').textContent = outputTax.toFixed(2);
+            document.getElementById('deductAmount').textContent = deductAmount.toFixed(2);
+            document.getElementById('inputTax').textContent = inputTax.toFixed(2);
+            document.getElementById('currentTax').textContent = currentTax.toFixed(2);
+            document.getElementById('taxBurden').textContent = taxRate.toFixed(2) + '%';
+            
+            // 计算附加税费
+            const educationTax = currentTax * 0.03;
+            const urbanTax = currentTax * 0.05;
+            const dikeFee = revenue * 0.001;
+            const stampTax = (revenue + deductAmount) * 0.0003;
+            const additionalTax = educationTax + urbanTax + dikeFee + stampTax;
+            
+            // 总应交税金
+            const totalTax = currentTax + additionalTax;
+            document.getElementById('totalTax').textContent = totalTax.toFixed(2);
+        }
+        
+        // 两步确认辅助：首次点击进入"待确认"态（按钮变红+脉冲），再次点击才执行；3 秒未确认自动恢复
+        function attachTwoStepConfirm(button, confirmHTML, actionFn) {
+            const originalHTML = button.innerHTML;
+            let pending = false;
+            let timer = null;
+            button.addEventListener('click', function() {
+                if (!pending) {
+                    pending = true;
+                    button.innerHTML = confirmHTML;
+                    button.classList.add('confirm-pending');
+                    timer = setTimeout(function() {
+                        pending = false;
+                        button.innerHTML = originalHTML;
+                        button.classList.remove('confirm-pending');
+                    }, 3000);
+                } else {
+                    clearTimeout(timer);
+                    pending = false;
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('confirm-pending');
+                    actionFn();
+                }
+            });
+        }
+
+        const resetConfirmHTML = '<span>⚠️</span> 再次点击确认重置';
+        attachTwoStepConfirm(document.getElementById('reset1'), resetConfirmHTML, function() {
+            document.getElementById('salesAmount').value = '';
+            document.getElementById('taxRate').value = '3';
+            document.querySelectorAll('#tab1 .result-value').forEach(el => {
+                el.textContent = '0.00';
+            });
+            document.getElementById('totalTax').textContent = '0.00';
+        });
+        
+        // 第二个计算器功能
+        document.getElementById('calculate2').addEventListener('click', calculateTax2);
+        document.getElementById('salesAmount2').addEventListener('input', calculateTax2);
+        document.getElementById('purchaseAmount2').addEventListener('input', calculateTax2);
+        
+        function calculateTax2() {
+            const salesAmount = parseFloat(document.getElementById('salesAmount2').value) || 0;
+            const purchaseAmount = parseFloat(document.getElementById('purchaseAmount2').value) || 0;
+            
+            // 计算逻辑
+            const revenue = salesAmount / 1.13;
+            const outputTax = revenue * 0.13;
+            const deductAmount = purchaseAmount / 1.13;
+            const inputTax = deductAmount * 0.13;
+            const currentTax = outputTax - inputTax;
+            const taxBurden = revenue > 0 ? currentTax / revenue : 0;
+            
+            // 更新显示结果
+            document.getElementById('revenue2').textContent = revenue.toFixed(2);
+            document.getElementById('outputTax2').textContent = outputTax.toFixed(2);
+            document.getElementById('deductAmount2').textContent = deductAmount.toFixed(2);
+            document.getElementById('inputTax2').textContent = inputTax.toFixed(2);
+            document.getElementById('currentTax2').textContent = currentTax.toFixed(2);
+            document.getElementById('taxBurden2').textContent = (taxBurden * 100).toFixed(2) + '%';
+            
+            // 计算附加税费（教育费附加 3% + 城建税 5%，与 Tab1/Tab3 保持一致）
+            const educationTax = currentTax * 0.03;
+            const urbanTax = currentTax * 0.05;
+            const dikeFee = revenue * 0.001;
+            const stampTax = (revenue + deductAmount) * 0.0003;
+            const additionalTax = educationTax + urbanTax + dikeFee + stampTax;
+            
+            // 总税
+            const totalTax = currentTax + additionalTax;
+            document.getElementById('totalTax2').textContent = totalTax.toFixed(2);
+        }
+        
+        attachTwoStepConfirm(document.getElementById('reset2'), resetConfirmHTML, function() {
+            document.getElementById('salesAmount2').value = '';
+            document.getElementById('purchaseAmount2').value = '';
+            document.querySelectorAll('#tab2 .result-value').forEach(el => {
+                el.textContent = '0.00';
+            });
+            document.getElementById('totalTax2').textContent = '0.00';
+        });
+        
+        // 第三个计算器功能
+        document.getElementById('calculate3').addEventListener('click', calculateTax3);
+        document.getElementById('purchaseAmount3').addEventListener('input', calculateTax3);
+        document.getElementById('taxRate3').addEventListener('input', calculateTax3);
+        
+        function calculateTax3() {
+            const purchaseAmount = parseFloat(document.getElementById('purchaseAmount3').value) || 0;
+            const taxRate = parseFloat(document.getElementById('taxRate3').value) || 0;
+            
+            // 计算逻辑
+            const deductAmount = purchaseAmount / 1.13;
+            const inputTax = deductAmount * 0.13;
+            // 按目标税负率反推不含税收入：revenue = inputTax / (0.13 - 税负率)
+            const denom = 0.13 - taxRate / 100;
+            if (denom <= 0) {
+                // 税负率需小于 13%，否则无法反推（会出现负税金）
+                document.getElementById('salesAmount3').textContent = '—';
+                document.getElementById('revenue3').textContent = '—';
+                document.getElementById('outputTax3').textContent = '—';
+                document.getElementById('deductAmount3').textContent = deductAmount.toFixed(2);
+                document.getElementById('inputTax3').textContent = inputTax.toFixed(2);
+                document.getElementById('currentTax3').textContent = '—';
+                document.getElementById('totalTax3').textContent = '—';
+                return;
+            }
+            
+            const revenue = inputTax / denom;
+            const outputTax = revenue * 0.13;
+            const salesAmount = revenue * 1.13;
+            const currentTax = outputTax - inputTax;
+            
+            // 更新显示结果
+            document.getElementById('salesAmount3').textContent = salesAmount.toFixed(2);
+            document.getElementById('revenue3').textContent = revenue.toFixed(2);
+            document.getElementById('outputTax3').textContent = outputTax.toFixed(2);
+            document.getElementById('deductAmount3').textContent = deductAmount.toFixed(2);
+            document.getElementById('inputTax3').textContent = inputTax.toFixed(2);
+            document.getElementById('currentTax3').textContent = currentTax.toFixed(2);
+            
+            // 计算附加税费
+            const educationTax = currentTax * 0.03;
+            const urbanTax = currentTax * 0.05;
+            const dikeFee = revenue * 0.001;
+            const stampTax = (revenue + deductAmount) * 0.0003;
+            const additionalTax = educationTax + urbanTax + dikeFee + stampTax;
+            
+            // 本月应交税金
+            const totalTax = currentTax + additionalTax;
+            document.getElementById('totalTax3').textContent = totalTax.toFixed(2);
+        }
+        
+        attachTwoStepConfirm(document.getElementById('reset3'), resetConfirmHTML, function() {
+            document.getElementById('purchaseAmount3').value = '';
+            document.getElementById('taxRate3').value = '3';
+            document.querySelectorAll('#tab3 .result-value').forEach(el => {
+                el.textContent = '0.00';
+            });
+            document.getElementById('totalTax3').textContent = '0.00';
+        });
+        
+        // 初始计算
+        calculateTax1();
+    </script>
+</body>
+</html>
