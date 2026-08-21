@@ -2,11 +2,11 @@
     ".url": {
         "qiyi-nav.Application": {
             "title": "奇易智能导航",
-            "icon": "images/icon_{0}.png",
+            "icon": "images/icon-{0}.png",
             "type": "url",
-        "protocol": "",
-        "port": "1315",
-        "url": "/",
+            "protocol": "http",
+            "port": "1315",
+            "url": "/",
             "allUsers": false
         }
     }
