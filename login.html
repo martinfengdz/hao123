@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>免密登录 · 奇易智能导航</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.01">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 免密登录中转页：与前台同主题（亮/暗），全左对齐 */
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-color, #0d1017);
+            color: var(--text-color, #e8eaed);
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .login-wrap { width: 100%; max-width: 480px; }
+        .login-card2 {
+            background: var(--card-bg, #151a23);
+            border: 1px solid var(--border-color, #2a3140);
+            border-radius: 14px;
+            padding: 26px 28px;
+            box-shadow: 0 8px 30px rgba(0,0,0,.35);
+        }
+        .lc-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+        .lc-head img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
+        .lc-title { font-size: 1.15rem; font-weight: 800; line-height: 1.3; margin: 0; text-align: left; }
+        .lc-sub { font-size: .85rem; color: var(--text-light, #9aa4b2); margin: 3px 0 0; text-align: left; word-break: break-all; }
+        .lc-row { margin: 14px 0; }
+        .lc-label { font-size: .78rem; color: var(--text-light, #9aa4b2); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+        .lc-value {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(128,128,128,.08);
+            border: 1px solid var(--border-color, #2a3140);
+            border-radius: 8px; padding: 8px 10px;
+            font-size: .92rem; word-break: break-all;
+        }
+        .lc-value .mono { font-family: Consolas, Menlo, monospace; flex: 1; min-width: 0; }
+        .lc-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        .lc-btns .btn { flex: 1 1 auto; justify-content: center; }
+        .lc-actions { display: flex; gap: 6px; }
+        .lc-actions .icon-btn {
+            border: 1px solid var(--border-color, #2a3140); background: transparent; color: var(--text-light, #9aa4b2);
+            border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: .8rem;
+        }
+        .lc-actions .icon-btn:hover { color: var(--primary-color, #6799fe); border-color: var(--primary-color, #6799fe); }
+        .lc-tip { margin-top: 16px; font-size: .78rem; line-height: 1.7; color: var(--text-light, #9aa4b2); text-align: left; }
+        .lc-tip b { color: var(--text-color, #e8eaed); }
+        .lc-loading, .lc-error { text-align: center; padding: 34px 10px; font-size: .95rem; color: var(--text-light, #9aa4b2); }
+        .lc-error i { color: #e74c3c; margin-right: 6px; }
+        .badge {
+            display: inline-block; font-size: .72rem; padding: 2px 8px; border-radius: 10px;
+            background: rgba(103,153,254,.15); color: var(--primary-color, #6799fe); margin-left: 6px;
+        }
+        /* 亮色主题：浅底深字 */
+        body.light { background: #f2f4f8; color: #1c2430; }
+        body.light .login-card2 { background: #ffffff; border-color: #e3e8f0; box-shadow: 0 8px 30px rgba(30,40,60,.08); }
+        body.light .lc-sub, body.light .lc-label, body.light .lc-tip, body.light .lc-loading, body.light .lc-error { color: #6b7785; }
+        body.light .lc-value { background: #f5f7fa; border-color: #e3e8f0; }
+        body.light .lc-actions .icon-btn { border-color: #d8dfe9; color: #6b7785; }
+    </style>
+</head>
+<body>
+    <div class="login-wrap">
+        <div class="login-card2">
+            <div class="lc-head">
+                <img id="l-site-icon" src="/assets/logo-default.png" alt="site icon">
+                <div>
+                    <h1 class="lc-title" id="l-site-name">正在读取…</h1>
+                    <p class="lc-sub" id="l-site-url">—</p>
+                </div>
+            </div>
+
+            <div id="l-loading" class="lc-loading"><i class="fas fa-spinner fa-spin"></i> 正在读取登录信息…</div>
+            <div id="l-error" class="lc-error" style="display:none;"></div>
+
+            <div id="l-body" style="display:none;">
+                <div class="lc-row">
+                    <div class="lc-label"><i class="fas fa-user"></i> 登录用户名</div>
+                    <div class="lc-value"><span class="mono" id="l-user">—</span></div>
+                </div>
+                <div class="lc-row">
+                    <div class="lc-label"><i class="fas fa-key"></i> 登录密码</div>
+                    <div class="lc-value">
+                        <span class="mono" id="l-pass">—</span>
+                        <span class="lc-actions">
+                            <button class="icon-btn" id="l-toggle" title="显示/隐藏密码"><i class="fas fa-eye"></i></button>
+                            <button class="icon-btn" id="l-copy-pass" title="复制密码"><i class="fas fa-copy"></i></button>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="lc-btns">
+                    <button class="btn btn-success" id="l-open"><i class="fas fa-external-link-alt"></i> 打开站点</button>
+                    <button class="btn btn-primary" id="l-autologin" title="携带账号密码直达（适用于支持 HTTP Basic 认证的设备，如路由器/NAS/监控等）"><i class="fas fa-bolt"></i> 免密直达</button>
+                </div>
+
+                <div class="lc-tip">
+                    <i class="fas fa-info-circle"></i> <b>免密登录说明</b>：<br>
+                    · <b>免密直达</b>：把账号密码拼进网址（<span class="mono">http(s)://用户:密码@主机/</span>）自动登录，适用于路由器、NAS、监控等支持 HTTP Basic 认证的设备；不支持 Basic 认证的站点（如各类网页表单登录）会直接打开站点，可在站点内按 <b>Ctrl+Shift+L</b> 唤起浏览器自动填充（若已在浏览器中保存过该站密码）。<br>
+                    · 凭据保存在导航后台「网址列表」的<b>用户名 / 密码</b>列，仅局域网/信任环境使用。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        // 主题跟随前台（localStorage 与前台共用 qiyiTheme）
+        function applyTheme() {
+            var dark = localStorage.getItem('qiyiTheme') !== 'light';
+            document.body.classList.toggle('light', !dark);
+        }
+        applyTheme();
+        try {
+            var observer = new MutationObserver(applyTheme);
+            observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        } catch (e) { /* ignore */ }
+
+        var $ = function (id) { return document.getElementById(id); };
+        var params = new URLSearchParams(location.search);
+        var id = (params.get('id') || '').trim();
+
+        function showErr(msg) {
+            $('l-loading').style.display = 'none';
+            var er = $('l-error');
+            er.style.display = 'block';
+            er.innerHTML = '<i class="fas fa-exclamation-triangle"></i>' + escapeHtml(msg);
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        function copyText(txt, btn, label) {
+            if (!txt) return;
+            var done = function () {
+                var old = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(function () { btn.innerHTML = old; }, 1200);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).then(done).catch(function () { fallback(); });
+            } else { fallback(); }
+            function fallback() {
+                var ta = document.createElement('textarea');
+                ta.value = txt; document.body.appendChild(ta); ta.select();
+                try { document.execCommand('copy'); done(); } catch (e) { /* ignore */ }
+                document.body.removeChild(ta);
+            }
+        }
+
+        function buildBasicAuthUrl(url, user, pass) {
+            try {
+                var u = new URL(url);
+                if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+                // 已含凭据则跳过
+                if (u.username || u.password) return u.href;
+                u.username = encodeURIComponent(user || '');
+                u.password = encodeURIComponent(pass || '');
+                return u.href;
+            } catch (e) { return ''; }
+        }
+
+        if (!id) { showErr('缺少链接参数（id）'); return; }
+
+        fetch('/api/cred/' + encodeURIComponent(id))
+            .then(function (r) {
+                if (r.status === 404) throw new Error('未找到该链接，或该链接已删除');
+                if (!r.ok) throw new Error('读取失败（' + r.status + '）');
+                return r.json();
+            })
+            .then(function (d) {
+                $('l-loading').style.display = 'none';
+                $('l-error').style.display = 'none';
+                $('l-body').style.display = 'block';
+                $('l-site-name').textContent = d.name || '未命名站点';
+                $('l-site-url').textContent = d.url || '—';
+                $('l-user').textContent = d.luser || '（未设置）';
+                $('l-pass').textContent = d.lpass || '（未设置）';
+                var hasPass = !!(d.lpass && String(d.lpass).trim());
+                $('l-toggle').style.display = hasPass ? '' : 'none';
+                $('l-copy-pass').style.display = hasPass ? '' : 'none';
+                $('l-pass').style.display = hasPass ? '' : 'none';
+                $('l-pass').textContent = hasPass ? '••••••••' : '（未设置）';
+                var shown = false;
+
+                // 打开站点
+                $('l-open').addEventListener('click', function () {
+                    if (d.url) window.open(d.url, '_blank', 'noopener');
+                });
+                // 免密直达：Basic Auth URL
+                $('l-autologin').addEventListener('click', function () {
+                    if (!d.url) return;
+                    var u = buildBasicAuthUrl(d.url, d.luser, d.lpass);
+                    if (u) window.open(u, '_blank', 'noopener');
+                    else window.open(d.url, '_blank', 'noopener');
+                });
+                // 显示/隐藏密码
+                $('l-toggle').addEventListener('click', function () {
+                    shown = !shown;
+                    $('l-pass').textContent = shown ? (d.lpass || '') : '••••••••';
+                    this.innerHTML = shown ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+                });
+                // 复制用户名 / 密码
+                $('l-copy-pass').addEventListener('click', function () {
+                    copyText(d.lpass || '', this);
+                });
+                var copyUser = document.createElement('button');
+                copyUser.className = 'icon-btn';
+                copyUser.title = '复制用户名';
+                copyUser.innerHTML = '<i class="fas fa-copy"></i>';
+                copyUser.addEventListener('click', function () { copyText(d.luser || '', this); });
+                $('l-user').parentNode.appendChild(copyUser);
+            })
+            .catch(function (e) { showErr(e.message || '读取失败'); });
+    })();
+    </script>
+</body>
+</html>
