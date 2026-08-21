@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>材料价格计算器</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#fff; --ink:#1f2733; --muted:#6b7686;
+    --line:#e6eaf2; --accent:#2f6df6; --accent-2:#13b4a6;
+    --ok:#1aa463; --radius:14px; --shadow:0 6px 24px rgba(31,39,51,.08);
+    --fs:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased;
+    font-size:var(--fs);overflow-x:hidden}
+  header{background:linear-gradient(120deg,#2f6df6,#13b4a6);color:#fff;
+    padding:clamp(18px,4vw,28px) clamp(14px,4vw,20px)}
+  header h1{margin:0;font-size:clamp(18px,4.5vw,24px);letter-spacing:.5px}
+  header p{margin:6px 0 0;opacity:.92;font-size:clamp(12px,3vw,13px);line-height:1.5}
+  .wrap{max-width:980px;margin:0 auto;padding:clamp(14px,3vw,20px)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2.5vw,18px);align-items:start}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:clamp(14px,3vw,18px)}
+  .card h2{margin:0 0 14px;font-size:clamp(14px,3.4vw,15px);display:flex;align-items:center;gap:8px}
+  .card h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+  .row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+  .field{flex:1 1 130px;min-width:0}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  input,select{width:100%;padding:11px 10px;border:1px solid var(--line);border-radius:9px;
+    font-size:16px;background:#fbfcfe;color:var(--ink);transition:.15s;
+    min-height:44px;appearance:none;-webkit-appearance:none}
+  select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%236b7686' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,109,246,.12)}
+  .shape-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .pill{padding:9px 14px;border:1px solid var(--line);border-radius:20px;cursor:pointer;
+    font-size:14px;background:#fbfcfe;user-select:none;transition:.15s;white-space:nowrap}
+  .pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn{width:100%;padding:13px;border:none;border-radius:10px;background:var(--accent);color:#fff;
+    font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:.15s;min-height:46px}
+  .btn:hover{filter:brightness(1.05)}
+  .btn.ghost{background:#eef3ff;color:var(--accent);border:1px solid #d6e2ff;margin-top:8px}
+  .result{background:linear-gradient(180deg,#fafcff,#f4f8ff);border:1px dashed #c9d8ff;border-radius:12px;padding:14px}
+  .res-line{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .res-line:last-child{border-bottom:none}
+  .res-line .k{color:var(--muted);flex:none}
+  .res-line .v{font-weight:700;text-align:right;word-break:break-all}
+  .res-line.total .v{color:var(--accent);font-size:clamp(16px,4vw,18px)}
+  .res-line.sale .v{color:var(--ok);font-size:clamp(16px,4vw,18px)}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
+  .edit-mat{background:#fff8f1;border:1px solid #f3d9bf;border-radius:10px;padding:12px;margin-top:12px}
+  .small-btn{font-size:12px;padding:8px 10px;border-radius:7px;border:1px solid var(--line);
+    background:#fff;cursor:pointer;color:var(--muted);min-height:36px}
+  .small-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .mat-meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px;border-radius:20px;
+    background:#eafaf1;color:var(--ok);border:1px solid #c7efd6;margin-left:6px}
+  .badge.old{background:#fff4e8;color:var(--accent-2);border-color:#f3dcc2}
+  .toast{position:fixed;bottom:max(20px,env(safe-area-inset-bottom));left:50%;
+    transform:translateX(-50%) translateY(20px);background:#1f2733;color:#fff;padding:10px 18px;
+    border-radius:24px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .foot{text-align:center;color:var(--muted);font-size:12px;padding:16px;line-height:1.5}
+  @media(max-width:760px){.result{position:static}}
+  /* 两步确认态：按钮变红+脉冲，提示"再点一次才执行"，3 秒后自动恢复 */
+  .confirm-pending{background:#fff4f4 !important;color:#ef4444 !important;border-color:#ef4444 !important;
+    animation:confirmPulse 1.1s ease-in-out infinite !important;box-shadow:0 0 0 4px rgba(239,68,68,.15)}
+  @keyframes confirmPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.40)}
+    50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}
+  }
+  /* 内联输入（替代原生 prompt，手机样式统一） */
+  .inline-prompt{margin-top:12px;padding:12px;background:#fff;border:1px solid var(--line);
+    border-radius:10px;display:none;animation:fadeIn .2s ease}
+  .inline-prompt.show{display:block}
+  .inline-prompt input{font-size:16px}
+  .ip-row{display:flex;gap:8px;margin-top:10px}
+  .ip-row .small-btn{flex:1;min-height:42px}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ 材料价格计算器</h1>
+  <p>输入尺寸 + 选材料 → 调密度算重量 → 调市场单价算成本（含利润率转售价）</p>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- 左：输入 -->
+    <div class="card">
+      <h2><span class="dot"></span>尺寸与材料</h2>
+
+      <div class="shape-pills" id="shapePills">
+        <div class="pill active" data-shape="box">长方体</div>
+        <div class="pill" data-shape="cylinder">圆柱体</div>
+        <div class="pill" data-shape="tube">圆管</div>
+        <div class="pill" data-shape="sphere">球体</div>
+      </div>
+
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="flex:2">
+          <label>尺寸单位</label>
+          <select id="unit">
+            <option value="mm" selected>毫米 (mm)</option>
+            <option value="cm">厘米 (cm)</option>
+            <option value="m">米 (m)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="dims"></div>
+
+      <div class="row" style="margin-top:6px">
+        <div class="field" style="flex:2">
+          <label>材料</label>
+          <select id="material"></select>
+          <div class="mat-meta" id="matMeta"></div>
+        </div>
+      </div>
+
+      <div class="edit-mat">
+        <div class="row" style="margin-bottom:0">
+          <div class="field">
+            <label>密度 (g/cm³)</label>
+            <input type="number" id="density" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>市场单价 (¥/kg)</label>
+            <input type="number" id="price" step="0.01" min="0">
+          </div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="small-btn" id="saveMat">另存为自定义材料</button>
+          <button class="small-btn" id="resetMat">恢复默认价</button>
+        </div>
+        <div class="inline-prompt" id="inlinePrompt">
+          <label style="font-size:12px;color:var(--muted);margin:0 0 5px">保存为材料名称：</label>
+          <input type="text" id="inlinePromptInput" maxlength="30" placeholder="输入材料名称" autocomplete="off">
+          <div class="ip-row">
+            <button class="small-btn" id="inlinePromptOk">✓ 保存</button>
+            <button class="small-btn" id="inlinePromptCancel">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="field">
+          <label>数量</label>
+          <input type="number" id="qty" value="1" step="1" min="1">
+        </div>
+        <div class="field">
+          <label>利润率 (%)</label>
+          <input type="number" id="markup" value="30" step="1" min="0">
+        </div>
+      </div>
+
+      <button class="btn" id="calcBtn">计算成本</button>
+      <button class="btn ghost" id="clearBtn">清空结果</button>
+    </div>
+
+    <!-- 右：结果 -->
+    <div class="card">
+      <h2><span class="dot" style="background:var(--accent-2)"></span>计算结果
+        <span class="badge" id="updBadge">—</span>
+      </h2>
+      <div class="result" id="result">
+        <div class="res-line"><span class="k">体积</span><span class="v" id="rVol">—</span></div>
+        <div class="res-line"><span class="k">单件重量</span><span class="v" id="rWeight">—</span></div>
+        <div class="res-line"><span class="k">材料单价</span><span class="v" id="rUnit">—</span></div>
+        <div class="res-line"><span class="k">总重（×数量）</span><span class="v" id="rTotalW">—</span></div>
+        <div class="res-line total"><span class="k">材料成本价</span><span class="v" id="rCost">—</span></div>
+        <div class="res-line sale"><span class="k">建议售价（含利润）</span><span class="v" id="rSale">—</span></div>
+      </div>
+      <p class="hint" id="breakHint"></p>
+      <p class="hint">金属类单价每日由计划任务联网更新（来源：东方财富 SHFE 主力合约，免费无需 Key）；塑料/木材等为参考价，可现场微调。点「另存为自定义材料」沉淀到本地材料库。</p>
+    </div>
+  </div>
+
+  <div class="foot">密度为物理常数不随行情变动；价格为参考值，实际采购请以实时合同价为准</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 每日自动生成的市场价（prices.js 由 update_prices.py 写入） -->
+<script src="prices.js"></script>
+<script>
+/* ============ 材料数据库（密度 g/cm³，单价 ¥/kg 参考值） ============ */
+const MATERIALS = {
+  "金属": [
+    {name:"普通碳钢 Q235", density:7.85, price:4.5},
+    {name:"优质碳钢 45#", density:7.85, price:5.2},
+    {name:"不锈钢 304", density:7.93, price:16},
+    {name:"不锈钢 316", density:7.98, price:24},
+    {name:"铝合金 6061", density:2.70, price:20},
+    {name:"铝合金 7075", density:2.81, price:30},
+    {name:"纯铜 (紫铜)", density:8.96, price:65},
+    {name:"黄铜 H62", density:8.50, price:50},
+    {name:"铸铁", density:7.20, price:5},
+    {name:"钛合金 TA2", density:4.51, price:120},
+    {name:"锌合金 ZAMAK", density:6.70, price:22},
+    {name:"铅", density:11.34, price:16}
+  ],
+  "塑料及非金属": [
+    {name:"ABS 塑料", density:1.05, price:12},
+    {name:"亚克力 PMMA", density:1.18, price:15},
+    {name:"尼龙 PA66", density:1.14, price:25},
+    {name:"PVC", density:1.38, price:8},
+    {name:"POM 赛钢", density:1.41, price:18},
+    {name:"电木 (酚醛)", density:1.40, price:14},
+    {name:"硅胶", density:1.20, price:40},
+    {name:"橡胶", density:1.30, price:18}
+  ],
+  "木材": [
+    {name:"松木", density:0.50, price:3},
+    {name:"橡木", density:0.75, price:8},
+    {name:"胶合板", density:0.60, price:5},
+    {name:"密度板 MDF", density:0.75, price:4}
+  ],
+  "其他": [
+    {name:"玻璃", density:2.50, price:6},
+    {name:"大理石", density:2.70, price:4},
+    {name:"混凝土", density:2.40, price:0.5},
+    {name:"陶瓷", density:2.40, price:10}
+  ]
+};
+
+/* 联网行情覆盖（由 prices.js 注入；键名须与上方材料名一致） */
+const LIVE = (typeof window.MARKET_PRICES !== "undefined") ? window.MARKET_PRICES : null;
+const LIVE_DATE = (typeof window.MARKET_UPDATED !== "undefined") ? window.MARKET_UPDATED : null;
+const LIVE_SRC  = (typeof window.MARKET_SOURCE !== "undefined") ? window.MARKET_SOURCE : "内置参考价";
+
+const SHAPE_FIELDS = {
+  box:      [["len","长"],["wid","宽"],["hei","高/长度"]],
+  cylinder: [["dia","直径"],["hei","高/长度"]],
+  tube:     [["outer","外径"],["inner","内径"],["len","管长"]],
+  sphere:   [["dia","直径"]]
+};
+const SHAPE_LABEL = {box:"长方体",cylinder:"圆柱体",tube:"圆管",sphere:"球体"};
+
+let currentShape = "box";
+const LS_KEY = "materialCalc_custom_v1";
+
+function $(id){return document.getElementById(id);}
+function toCm(val,unit){return unit==="mm"?val/10:unit==="m"?val*100:val;}
+function fmt(n,d=2){if(!isFinite(n))return "—";return Number(n.toFixed(d)).toLocaleString("zh-CN");}
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1800);}
+
+/* 默认单价：优先联网行情，其次内置库 */
+function defaultPrice(m){
+  if(LIVE && LIVE[m.name]!=null) return LIVE[m.name];
+  return m.price;
+}
+
+function loadCustom(){try{return JSON.parse(localStorage.getItem(LS_KEY))||[];}catch(e){return[];}}
+function saveCustom(list){localStorage.setItem(LS_KEY,JSON.stringify(list));}
+
+function renderMaterials(){
+  const sel=$("material");sel.innerHTML="";
+  const groups={...MATERIALS};
+  const custom=loadCustom();
+  if(custom.length) groups["我的材料库"]=custom;
+  for(const cat in groups){
+    const og=document.createElement("optgroup");og.label=cat;
+    groups[cat].forEach((m,i)=>{
+      const o=document.createElement("option");
+      o.value=cat+"||"+i;o.textContent=m.name;sel.appendChild(o);
+    });
+    sel.appendChild(og);
+  }
+}
+
+function fillMatParams(){
+  const sel=$("material");if(!sel.value)return;
+  const [cat,idx]=sel.value.split("||");
+  const list={...MATERIALS};const custom=loadCustom();if(custom.length)list["我的材料库"]=custom;
+  const m=list[cat][+idx];if(!m)return;
+  $("density").value=m.density;
+  const p=defaultPrice(m);
+  $("price").value=p;
+  const liveTag = (LIVE && LIVE[m.name]!=null) ? ` · 🟢联网行情 ${LIVE_DATE||""}` : "";
+  $("matMeta").textContent=`分类：${cat}${liveTag}`;
+}
+
+function renderDims(){
+  const box=$("dims");box.innerHTML="";
+  SHAPE_FIELDS[currentShape].forEach(([key,label])=>{
+    const f=document.createElement("div");f.className="field";
+    f.innerHTML=`<label>${label}</label><input type="number" id="d_${key}" step="0.01" min="0" placeholder="0" inputmode="decimal">`;
+    box.appendChild(f);
+  });
+  box.style.display="flex";box.style.flexWrap="wrap";box.style.gap="12px";
+  box.querySelectorAll(".field").forEach(f=>f.style.flex="1 1 130px");
+}
+
+function calc(){
+  const unit=$("unit").value;
+  const d={};
+  SHAPE_FIELDS[currentShape].forEach(([k])=>{d[k]=parseFloat($("d_"+k).value)||0;});
+  const density=parseFloat($("density").value)||0;
+  const price=parseFloat($("price").value)||0;
+  const qty=Math.max(1,parseInt($("qty").value)||1);
+  const markup=parseFloat($("markup").value)||0;
+
+  for(const k in d) d[k]=toCm(d[k],unit);
+
+  let V=0;
+  if(currentShape==="box")        V=d.len*d.wid*d.hei;
+  else if(currentShape==="cylinder") V=Math.PI*Math.pow(d.dia/2,2)*d.hei;
+  else if(currentShape==="tube")  V=Math.PI/4*(d.outer*d.outer-d.inner*d.inner)*d.len;
+  else if(currentShape==="sphere")V=4/3*Math.PI*Math.pow(d.dia/2,3);
+
+  if(V<=0){toast("请填写有效的尺寸");return;}
+
+  const massG=V*density;
+  const massKg=massG/1000;
+  const totalKg=massKg*qty;
+  const cost=totalKg*price;
+  const sale=cost*(1+markup/100);
+
+  let volText;
+  if(V>=1e6) volText=fmt(V/1e6,3)+" m³";
+  else if(V>=1) volText=fmt(V,2)+" cm³";
+  else volText=fmt(V*1000,2)+" mm³";
+
+  $("rVol").textContent=volText;
+  $("rWeight").textContent=fmt(massKg,3)+" kg";
+  $("rUnit").textContent="¥ "+fmt(price,2)+" /kg";
+  $("rTotalW").textContent=fmt(totalKg,3)+" kg";
+  $("rCost").textContent="¥ "+fmt(cost,2);
+  $("rSale").textContent="¥ "+fmt(sale,2);
+
+  $("breakHint").innerHTML=
+    `形状：${SHAPE_LABEL[currentShape]} · 单价 ¥${fmt(price,2)}/kg · 利润 ${markup}% &nbsp;|&nbsp; 成本价=重量×单价，售价=成本×(1+利润率)`;
+}
+
+/* 行情徽标 */
+(function(){
+  const b=$("updBadge");
+  if(LIVE && LIVE_DATE){
+    b.textContent="🟢 行情 "+LIVE_DATE;
+    b.className="badge";
+  }else{
+    b.textContent="🟡 内置参考价";
+    b.className="badge old";
+  }
+})();
+
+$("shapePills").addEventListener("click",e=>{
+  const p=e.target.closest(".pill");if(!p)return;
+  document.querySelectorAll(".pill").forEach(x=>x.classList.remove("active"));
+  p.classList.add("active");currentShape=p.dataset.shape;renderDims();
+});
+$("material").addEventListener("change",fillMatParams);
+$("calcBtn").addEventListener("click",calc);
+$("unit").addEventListener("change",()=>{if($("rVol").textContent!=="—")calc();});
+document.addEventListener("input",e=>{
+  if(e.target.id.startsWith("d_")||["density","price","qty","markup"].includes(e.target.id)){
+    if($("rVol").textContent!=="—")calc();
+  }
+});
+/* 两步确认：首次点击进入红色待确认态，3 秒内再点一次才执行 */
+function attachTwoStepConfirm(button, confirmHTML, actionFn) {
+  if(!button) return;
+  const originalHTML = button.innerHTML;
+  let pending = false, timer = null;
+  button.addEventListener("click", function(){
+    if(!pending){
+      pending = true;
+      button.innerHTML = confirmHTML;
+      button.classList.add("confirm-pending");
+      timer = setTimeout(function(){
+        pending = false;
+        button.innerHTML = originalHTML;
+        button.classList.remove("confirm-pending");
+      }, 3000);
+    }else{
+      clearTimeout(timer);
+      pending = false;
+      button.innerHTML = originalHTML;
+      button.classList.remove("confirm-pending");
+      actionFn();
+    }
+  });
+}
+attachTwoStepConfirm($("clearBtn"), '⚠️ 再次点击确认清空', function(){
+  ["rVol","rWeight","rUnit","rTotalW","rCost","rSale"].forEach(id=>$(id).textContent="—");
+  $("breakHint").textContent="";
+});
+attachTwoStepConfirm($("resetMat"), '⚠️ 再次点击确认重置', fillMatParams);
+
+/* 内联保存材料名（替代原生 prompt，手机上样式统一） */
+let promptCtx = null;
+$("saveMat").addEventListener("click", function(){
+  const name=$("material").selectedOptions[0]?.textContent||"自定义材料";
+  const density=parseFloat($("density").value)||0;
+  const price=parseFloat($("price").value)||0;
+  if(!density||!price){toast("密度和单价需大于0");return;}
+  promptCtx={density,price};
+  $("inlinePromptInput").value=name;
+  $("inlinePrompt").classList.add("show");
+  $("inlinePromptInput").focus();
+});
+$("inlinePromptOk").addEventListener("click", function(){
+  const v=$("inlinePromptInput").value.trim();
+  if(!v){toast("名称不能为空");return;}
+  if(!promptCtx)return;
+  const list=loadCustom();
+  list.push({name:v,density:promptCtx.density,price:promptCtx.price});
+  saveCustom(list);renderMaterials();toast("已保存到「我的材料库」");
+  $("inlinePrompt").classList.remove("show");promptCtx=null;
+});
+$("inlinePromptCancel").addEventListener("click", function(){
+  $("inlinePrompt").classList.remove("show");promptCtx=null;
+});
+$("inlinePromptInput").addEventListener("keydown", function(e){
+  if(e.key==="Enter") $("inlinePromptOk").click();
+  else if(e.key==="Escape") $("inlinePromptCancel").click();
+});
+
+renderMaterials();fillMatParams();renderDims();
+</script>
+<footer style="text-align:center;padding:14px 12px;font-size:12px;color:#6b7686;border-top:1px solid #e6eaf2;">
+  <p>⚖️ 材料价格计算器 v3.1.0 · 更新于 2026-08-20 · 完全离线可用</p>
+</footer>
+</body>
+</html>
