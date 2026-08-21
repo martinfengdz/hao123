@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络速度测试</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            flex: 1;
+            margin: 0 10px;
+            text-align: center;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .status-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .test-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 20px 0;
+        }
+        
+        .test-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .test-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .progress-container {
+            margin: 20px 0;
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: var(--light-color);
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background-color: var(--secondary-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .result-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        
+        .result-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .download {
+            color: var(--primary-color);
+        }
+        
+        .upload {
+            color: var(--secondary-color);
+        }
+        
+        .history {
+            margin-top: 30px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .history h3 {
+            margin-bottom: 15px;
+            color: var(--dark-color);
+        }
+        
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--light-color);
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 600px) {
+            .results {
+                grid-template-columns: 1fr;
+            }
+            
+            .status {
+                flex-direction: column;
+            }
+            
+            .status-item {
+                margin: 5px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>网络速度测试</h1>
+            <p>测试您的下载和上传速度</p>
+        </header>
+        
+        <div class="status">
+            <div class="status-item">
+                <div>网络状态</div>
+                <div class="status-value" id="connection-status">检测中...</div>
+            </div>
+            <div class="status-item">
+                <div>延迟</div>
+                <div class="status-value" id="ping">-- ms</div>
+            </div>
+        </div>
+        
+        <button class="test-btn" id="start-test">开始测试</button>
+        
+        <div class="progress-container">
+            <div id="test-status">准备测试...</div>
+            <div class="progress-bar">
+                <div class="progress" id="test-progress"></div>
+            </div>
+        </div>
+        
+        <div class="results">
+            <div class="result-card">
+                <h2>下载速度</h2>
+                <div class="result-value download" id="download-speed">-- Mbps</div>
+                <p>从互联网接收数据的速度</p>
+            </div>
+            <div class="result-card">
+                <h2>上传速度</h2>
+                <div class="result-value upload" id="upload-speed">-- Mbps</div>
+                <p>向互联网发送数据的速度</p>
+            </div>
+        </div>
+        
+        <div class="history">
+            <h3>测试历史</h3>
+            <div id="history-list">
+                <!-- 历史记录将在这里动态生成 -->
+                <div class="history-item">
+                    <span>暂无测试记录</span>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>© 2023 网络速度测试工具 | 仅供测试使用</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startTestBtn = document.getElementById('start-test');
+            const testStatus = document.getElementById('test-status');
+            const testProgress = document.getElementById('test-progress');
+            const downloadSpeed = document.getElementById('download-speed');
+            const uploadSpeed = document.getElementById('upload-speed');
+            const connectionStatus = document.getElementById('connection-status');
+            const pingElement = document.getElementById('ping');
+            const historyList = document.getElementById('history-list');
+            
+            let testInProgress = false;
+            let testHistory = JSON.parse(localStorage.getItem('speedTestHistory')) || [];
+            
+            // 更新历史记录显示
+            updateHistoryDisplay();
+            
+            // 检测网络状态
+            checkConnection();
+            
+            // 开始测试按钮点击事件
+            startTestBtn.addEventListener('click', function() {
+                if (testInProgress) return;
+                
+                startSpeedTest();
+            });
+            
+            // 检查网络连接状态
+            function checkConnection() {
+                if (navigator.onLine) {
+                    connectionStatus.textContent = '已连接';
+                    connectionStatus.style.color = '#2ecc71';
+                    
+                    // 简单的延迟测试
+                    testPing();
+                } else {
+                    connectionStatus.textContent = '未连接';
+                    connectionStatus.style.color = '#e74c3c';
+                    pingElement.textContent = '-- ms';
+                }
+            }
+            
+            // 测试延迟
+            function testPing() {
+                const startTime = Date.now();
+                const image = new Image();
+                image.src = 'https://www.google.com/favicon.ico?t=' + startTime;
+                
+                image.onload = function() {
+                    const ping = Date.now() - startTime;
+                    pingElement.textContent = ping + ' ms';
+                };
+                
+                image.onerror = function() {
+                    pingElement.textContent = '超时';
+                };
+            }
+            
+            // 开始速度测试
+            function startSpeedTest() {
+                testInProgress = true;
+                startTestBtn.disabled = true;
+                startTestBtn.textContent = '测试中...';
+                
+                // 重置显示
+                downloadSpeed.textContent = '-- Mbps';
+                uploadSpeed.textContent = '-- Mbps';
+                testProgress.style.width = '0%';
+                
+                // 模拟测试过程
+                simulateTest();
+            }
+            
+            // 模拟测试过程
+            function simulateTest() {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    if (progress > 100) progress = 100;
+                    
+                    testProgress.style.width = progress + '%';
+                    
+                    if (progress < 30) {
+                        testStatus.textContent = '正在测试延迟...';
+                    } else if (progress < 60) {
+                        testStatus.textContent = '正在测试下载速度...';
+                        if (progress > 45 && progress < 50) {
+                            // 模拟下载速度结果
+                            const download = (Math.random() * 100 + 20).toFixed(2);
+                            downloadSpeed.textContent = download + ' Mbps';
+                        }
+                    } else if (progress < 90) {
+                        testStatus.textContent = '正在测试上传速度...';
+                        if (progress > 75 && progress < 80) {
+                            // 模拟上传速度结果
+                            const upload = (Math.random() * 50 + 5).toFixed(2);
+                            uploadSpeed.textContent = upload + ' Mbps';
+                        }
+                    } else {
+                        testStatus.textContent = '正在生成报告...';
+                    }
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        completeTest();
+                    }
+                }, 200);
+            }
+            
+            // 完成测试
+            function completeTest() {
+                testInProgress = false;
+                startTestBtn.disabled = false;
+                startTestBtn.textContent = '重新测试';
+                testStatus.textContent = '测试完成！';
+                
+                // 保存测试结果到历史记录
+                const downloadValue = parseFloat(downloadSpeed.textContent);
+                const uploadValue = parseFloat(uploadSpeed.textContent);
+                const timestamp = new Date().toLocaleString();
+                
+                const testResult = {
+                    timestamp: timestamp,
+                    download: downloadValue,
+                    upload: uploadValue
+                };
+                
+                testHistory.unshift(testResult);
+                if (testHistory.length > 5) {
+                    testHistory.pop();
+                }
+                
+                localStorage.setItem('speedTestHistory', JSON.stringify(testHistory));
+                updateHistoryDisplay();
+            }
+            
+            // 更新历史记录显示
+            function updateHistoryDisplay() {
+                if (testHistory.length === 0) {
+                    historyList.innerHTML = '<div class="history-item"><span>暂无测试记录</span></div>';
+                    return;
+                }
+                
+                historyList.innerHTML = '';
+                testHistory.forEach(result => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    historyItem.innerHTML = `
+                        <span>${result.timestamp}</span>
+                        <span>下载: ${result.download} Mbps | 上传: ${result.upload} Mbps</span>
+                    `;
+                    historyList.appendChild(historyItem);
+                });
+            }
+            
+            // 监听网络状态变化
+            window.addEventListener('online', checkConnection);
+            window.addEventListener('offline', checkConnection);
+        });
+    </script>
+</body>
+</html>
