@@ -1,24 +1,24 @@
-"""V3.1.3 同步脚本：复用 317 思路，升版号 3.1.3 -> 3.1.3，并同步图标自检新代码。"""
+"""V3.1.8 同步脚本：升版号 3.1.6 -> 3.1.6，并同步"数据备份/还原"新代码。"""
 import shutil, re, os
 from pathlib import Path
 
 ROOT = Path('C:/Users/Administrator/WorkBuddy/2026-08-15-19-18-13/qiyi-nav-recovery/hao123')
 SRC = ROOT
 BUILD = ROOT / 'fnos' / 'qiyi-nav' / 'app' / 'build'
-OLD = '3.1.3'
-NEW = '3.1.3'
+OLD = '3.1.6'
+NEW = '3.1.8'
 
 # 1) 同步源码到 fnos 构建副本
 # 注意：外层 fnos/qiyi-nav/manifest 是 FPK 元数据唯一真源，fnpack 直接读取它，
 # 不要把它复制进 app/ 树（否则会生成多余的 app/manifest 被打包进 app.tgz）。
-# Dockerfile 也在此同步（已含 COPY assets ./assets 与 version 3.1.3）。
+# Dockerfile 也在此同步（已含 COPY assets ./assets 与 version 3.1.8）。
 FILES = [
     'js/admin.js', 'js/script.js', 'js/api.js',
     'server.js', 'admin.html', 'index.html',
     'css/admin.css', 'css/style.css',
     'package.json', 'Dockerfile',
     'data/seed.json',
-    'scripts/seed.js', 'scripts/verify.js',
+    'scripts/seed.js', 'scripts/verify.js', 'scripts/backup.sh',
     'RELEASE_NOTES.md',
 ]
 for rel in FILES:
@@ -49,7 +49,7 @@ if img_dir.is_dir():
 #    （对齐 ui/config 的 images/icon_{0}.png；浅/深主题），本脚本不重复同步。
 
 # 5) 全树替换版本号（排除 RELEASE_NOTES 历史段与后端 git 历史段）
-EXCLUDE_PATTERNS = [r'RELEASE_NOTES\.md', r'\.history/', r'\.git/']
+EXCLUDE_PATTERNS = [r'RELEASE_NOTES\.md', r'\.history/', r'\.git/', r'fnos/qiyi-nav/manifest']
 
 def should_skip(p: Path) -> bool:
     rel = str(p).replace('\\', '/')
