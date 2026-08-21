@@ -7,7 +7,7 @@
 
 // ==================== 全局配置 ====================
 const CONFIG = {
-    VERSION: '3.1.3',
+    VERSION: '3.3.01',
     DEFAULT_PASSWORD: 'admin',
     LINKS_PER_PAGE: 35,
     SEARCH_ENGINES: {
@@ -81,7 +81,7 @@ const DEFAULT_FOOTER_HTML = [
     '  <div class="footer-status">',
     '    <span id="system-status"><i class="fas fa-circle status-online"></i> 系统正常</span>',
     '    <span class="footer-separator">|</span>',
-    '    <span>版本: <span class="version">V3.1.3</span></span>',
+    '    <span>版本: <span class="version" id="footer-version"></span></span>',
     '    <span class="footer-separator">|</span>',
     '    <span>© <span id="current-year-footer"></span> 奇易智能导航</span>',
     '    <span class="footer-separator">|</span>',
@@ -118,10 +118,14 @@ const DEFAULT_SITE = {
         { text: '海纳思', href: 'http://192.168.1.3', icon: 'fas fa-server', target: '_blank' },
         { text: 'FNOSNAS', href: 'https://fnos.net/dznasos', icon: 'fas fa-server', target: '_blank' },
         { text: 'NSA319服务器', href: 'http://192.168.1.119:91/cgi-bin/', icon: 'fas fa-server', target: '_blank' },
-        { text: '网络测速', href: 'TEST.html', icon: 'fas fa-tachometer-alt', target: '_blank' },
-        { text: '税务计算器', href: 'customs.html', icon: 'fas fa-calculator', target: '_blank' },
+        { text: '网络测速', href: '/pages/TEST.html', icon: 'fas fa-tachometer-alt', target: '_blank' },
+        { text: '税务计算器', href: '/pages/customs.html', icon: 'fas fa-calculator', target: '_blank' },
         { text: '齿轮计算', href: '131.html', icon: 'fas fa-calculator', target: '_blank' },
-        { text: '理财计算', href: 'zlcalculator.html', icon: 'fas fa-chart-line', target: '_blank' },
+        { text: '理财计算', href: '/pages/zlcalculator.html', icon: 'fas fa-chart-line', target: '_blank' },
+        // V3.3.01 新增：计算机目录工具页（与 default-pages 播种的自建页面配套）
+        { text: '多功能计算器', href: '/pages/calculator.html', icon: 'fas fa-calculator', target: '_blank' },
+        { text: '齿轮参数', href: '/pages/calculator2.html', icon: 'fas fa-cogs', target: '_blank' },
+        { text: '材料价格', href: '/pages/Material.html', icon: 'fas fa-boxes', target: '_blank' },
         { text: '设备解锁', href: 'Unlock.html', icon: 'fas fa-unlock', target: '_blank' },
         { text: 'HCdzai', href: 'http://192.168.1.7:5666/', icon: 'fas fa-server', target: '_blank' },
         { text: 'FnDzAi', href: 'http://192.168.1.6:5666/', icon: 'fas fa-server', target: '_blank' },
@@ -150,7 +154,19 @@ const DEFAULT_SITE = {
     ],
     // 自定义 LOGO：hasCustom=true 时前端加载 /api/site/logo/<which>，否则回退 /assets/logo-default.png
     frontendLogo: { hasCustom: false, ext: '' },
-    backendLogo: { hasCustom: false, ext: '' }
+    backendLogo: { hasCustom: false, ext: '' },
+    // 动态背景：效果（none/particles/glow/aurora）与应用页面（frontend/backend/both）
+    bgEffect: 'particles',
+    bgTarget: 'frontend',
+    // 默认搜索引擎（后台「外观」设置；首页进入预选该引擎）
+    searchEngine: 'baidu',
+    // 首页页首「天气区」嵌入代码（V3.2.33 出厂默认留空 → 启用内置天气组件；
+    // 若在后台填了自定义 iframe 嵌入代码（如中国天气网天气条）则优先使用自定义代码）
+    weatherCode: '',
+    // 内置天气组件城市（后台「外观」可改；数据源 wttr.in 免密钥，默认广州）
+    weatherCity: '广州',
+    // 首页进入「开幕动画」开关
+    splash: true
 };
 
 // 合并站点外观配置（补齐缺失字段，避免渲染报错）
@@ -174,6 +190,12 @@ function normalizeSite(s) {
     if (s.backendLogo && typeof s.backendLogo === 'object') {
         out.backendLogo = { hasCustom: !!s.backendLogo.hasCustom, ext: String(s.backendLogo.ext || '') };
     }
+    if (s.bgEffect && ['none', 'particles', 'glow', 'aurora'].indexOf(s.bgEffect) >= 0) out.bgEffect = s.bgEffect;
+    if (s.bgTarget && ['frontend', 'backend', 'both'].indexOf(s.bgTarget) >= 0) out.bgTarget = s.bgTarget;
+    if (s.searchEngine && ['baidu', 'google', 'bing', '360', 'searxng'].indexOf(s.searchEngine) >= 0) out.searchEngine = s.searchEngine;
+    if (typeof s.weatherCode === 'string') out.weatherCode = s.weatherCode;
+    if (typeof s.weatherCity === 'string' && s.weatherCity.trim()) out.weatherCity = s.weatherCity.trim();
+    if (typeof s.splash === 'boolean') out.splash = s.splash;
     return out;
 }
 
@@ -192,7 +214,7 @@ const APP_STATE = {
     currentSearchEngine: 'baidu',
     searchHistory: [],
     MAX_SEARCH_HISTORY: 20,
-    darkMode: false,
+    darkMode: true,
     linkData: {},
     filteredLinks: [],
     visitCount: 0,
@@ -583,8 +605,10 @@ function showGreeting() {
     // 自定义文案优先，否则按当前时间匹配分时段问候
     greetingText.textContent = resolveGreetingText(g);
 
-    // 显示问候语
+    // 显示问候语（触发顶部弹性滑入动画 + 30 秒倒计时进度条）
     greetingContainer.classList.remove('hidden');
+    greetingContainer.classList.add('visible');
+    restartGreetingProgress(greetingContainer);
 
     // 清除之前的定时器
     if (APP_STATE.greetingTimeout) {
@@ -607,9 +631,31 @@ function showGreeting() {
 function hideGreeting() {
     const greetingContainer = document.getElementById('greeting-container');
     if (greetingContainer) {
+        greetingContainer.classList.remove('visible');
         greetingContainer.classList.add('hidden');
+        stopGreetingProgress(greetingContainer);
         logActivity('问候语已隐藏', 'info');
     }
+}
+
+/**
+ * 重启 30 秒倒计时进度条动画（V3.2.33）
+ */
+function restartGreetingProgress(container) {
+    const bar = container && container.querySelector('.greeting-progress');
+    if (!bar) return;
+    bar.style.animation = 'none';
+    void bar.offsetWidth; // 强制重排以重启动画
+    bar.style.animation = '';
+}
+
+/**
+ * 停止 30 秒倒计时进度条动画（V3.2.33）
+ */
+function stopGreetingProgress(container) {
+    const bar = container && container.querySelector('.greeting-progress');
+    if (!bar) return;
+    bar.style.animation = 'none';
 }
 
 /**
@@ -628,7 +674,7 @@ function initGreeting() {
     // 等待页面加载完成后再显示问候语
     setTimeout(() => {
         showGreeting();
-    }, 1500); // 延迟1.5秒显示，让用户先看到页面
+    }, 500); // V3.2.33：延迟0.5秒后从顶部弹性滑入
 }
 
 /**
@@ -654,16 +700,18 @@ function initGreetingEvents() {
         let hideTimeout;
 
         greetingContainer.addEventListener('mouseenter', function() {
-            // 清除自动隐藏的定时器
+            // 暂停：清除自动隐藏的定时器 + 暂停进度条动画
             if (APP_STATE.greetingTimeout) {
                 clearTimeout(APP_STATE.greetingTimeout);
                 APP_STATE.greetingTimeout = null;
             }
+            greetingContainer.classList.add('paused');
         });
 
         greetingContainer.addEventListener('mouseleave', function() {
-            // 重新设置30秒后隐藏
-            if (!greetingContainer.classList.contains('hidden')) {
+            // 恢复：进度条继续 + 重新设置30秒后隐藏
+            greetingContainer.classList.remove('paused');
+            if (greetingContainer.classList.contains('visible')) {
                 APP_STATE.greetingTimeout = setTimeout(() => {
                     hideGreeting();
                 }, 30000);
@@ -682,7 +730,7 @@ function initGreetingEvents() {
 
             // 主题切换后，如果问候语是显示的，短暂显示一下确保样式正确
             const greetingContainer = document.getElementById('greeting-container');
-            if (greetingContainer && !greetingContainer.classList.contains('hidden')) {
+            if (greetingContainer && greetingContainer.classList.contains('visible')) {
                 greetingContainer.style.opacity = '0';
                 setTimeout(() => {
                     greetingContainer.style.opacity = '1';
@@ -859,15 +907,30 @@ function updateLunarDate() {
 // ==================== 时间管理 ====================
 
 /**
+ * 计算日期的 ISO 8601 周编号（V3.2.33：#current-time 末尾追加「第N周」）
+ * 规则：周一为周首；第 1 周包含 1 月 4 日的那一周
+ * @param {Date} date
+ * @returns {number} ISO 周编号（1-53）
+ */
+function getISOWeek(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;            // 周日=0 → 转 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);    // 移到当前周的周四
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+/**
  * 更新时间和日期显示
  */
 function updateTimeDisplay() {
     const now = new Date();
 
-    // 更新当前时间（公历）
+    // 更新当前时间（公历）+ ISO 周编号
+    // V3.2.34 修复：formatTime('full') 内部已返回「周X」（第 808 行），这里只追加「第N周」避免「周四 周四 第N周」重复
     const timeElement = document.getElementById('current-time');
     if (timeElement) {
-        timeElement.textContent = formatTime(now, 'full');
+        timeElement.textContent = formatTime(now, 'full') + ' 第' + getISOWeek(now) + '周';
 
         // 根据时间段调整公历日期颜色
         const hour = now.getHours();
@@ -929,7 +992,12 @@ function loadAllDataFromStorage() {
     // 链接数据由 loadInitialData 负责；这里只处理主题/统计/搜索历史等本地偏好
 
     const savedTheme = localStorage.getItem('qiyiTheme');
-    if (savedTheme === 'dark') {
+    if (savedTheme === 'light') {
+        APP_STATE.darkMode = false;
+        document.body.classList.remove('dark-mode');
+        updateThemeButton();
+    } else {
+        // 默认启用深色主题（deepseek 风格）
         APP_STATE.darkMode = true;
         document.body.classList.add('dark-mode');
         updateThemeButton();
@@ -1212,16 +1280,6 @@ function revokePermission() {
  * 更新权限UI状态
  */
 function updatePermissionUI() {
-    const addLinkBtn = document.getElementById('add-link-btn-bottom');
-    if (addLinkBtn) {
-        if (APP_STATE.hasPermission) {
-            addLinkBtn.disabled = false;
-            addLinkBtn.title = '添加网址';
-        } else {
-            addLinkBtn.disabled = true;
-            addLinkBtn.title = '需要管理权限';
-        }
-    }
 
     syncAdminMenuIcon();
 }
@@ -1346,6 +1404,13 @@ function createLinkElement(link, category, index) {
             </button>
         </div>` : '';
 
+    // V3.2.20：免密登录入口——该链接设置了登录用户名/密码时显示钥匙按钮，
+    // 点击打开免密登录中转页 /login.html?id=<id>（凭据不出现在本页，由中转页按需拉取）
+    const hasCred = !!(link.hasCred || (link.luser && String(link.luser).trim()) || (link.lpass && String(link.lpass).trim()));
+    const loginBtnHtml = hasCred
+        ? `<button class="link-login-btn has-cred" data-act="login" data-login-id="${escapeHtml(link.id || '')}" title="免密登录：${escapeHtml(link.name || '')}"><i class="fas fa-key"></i></button>`
+        : '';
+
     const favSrc = link.favicon
         ? link.favicon
         : (typeof Api !== 'undefined' && Api.faviconUrl ? Api.faviconUrl(link.url) : '');
@@ -1358,6 +1423,7 @@ function createLinkElement(link, category, index) {
             ${iconHtml}
             <span class="link-name">${escapeHtml(link.name)}</span>
         </a>
+        ${loginBtnHtml}
         ${actionsHtml}
     `;
 
@@ -1365,6 +1431,18 @@ function createLinkElement(link, category, index) {
     if (linkAnchor) {
         linkAnchor.addEventListener('click', function() {
             logActivity(`访问链接: ${link.name}`, 'info');
+        });
+    }
+
+    // V3.2.20：免密登录按钮——打开中转页自动填充/免密直达
+    const loginBtn = linkItem.querySelector('[data-act="login"]');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const lid = this.getAttribute('data-login-id');
+            if (!lid) { showNotification('缺少链接标识，无法免密登录', 'error'); return; }
+            window.open('/login.html?id=' + encodeURIComponent(lid), '_blank', 'noopener');
         });
     }
 
@@ -1710,13 +1788,14 @@ function renderSearchOverlay(data) {
 }
 
 /**
- * 读取后台配置，若 SearXNG 设为默认引擎则预选版头"综合"
+ * 读取后台配置，若 SearXNG 设为默认引擎（「设置」里的版头默认 或 「外观」默认搜索引擎=综合）则预选版头"综合"
  */
 function applySearchSettings() {
     Api.getSettings().then(function (r) {
         if (r.status === 200 && r.data && r.data.searxng) {
             const s = r.data.searxng;
-            if (s.enabled && s.defaultEngine) {
+            const wantSearxng = (APP_STATE.defaultEngine === 'searxng') || !!s.defaultEngine;
+            if (s.enabled && wantSearxng) {
                 const rb = document.querySelector('input[name="search-engine"][value="searxng"]');
                 if (rb) rb.checked = true;
             }
@@ -1936,25 +2015,6 @@ function initEventListeners() {
     document.getElementById('toggle-theme')?.addEventListener('click', toggleTheme);
     document.getElementById('floating-theme')?.addEventListener('click', toggleTheme);
 
-    document.getElementById('add-link-btn-bottom')?.addEventListener('click', function() {
-        requirePermission(() => {
-            document.getElementById('modal-action').textContent = '添加';
-            document.getElementById('link-index').value = '';
-            document.getElementById('link-original-category').value = APP_STATE.currentTab;
-            document.getElementById('link-name').value = '';
-            document.getElementById('link-url').value = '';
-            document.getElementById('link-favicon').value = '';
-            document.getElementById('link-category').value = APP_STATE.currentTab;
-            document.getElementById('link-color').value = '';
-
-            document.getElementById('link-modal').style.display = 'flex';
-        });
-    });
-
-    document.getElementById('floating-add')?.addEventListener('click', function() {
-        document.getElementById('add-link-btn-bottom').click();
-    });
-
     document.getElementById('modal-close')?.addEventListener('click', function() {
         document.getElementById('link-modal').style.display = 'none';
     });
@@ -2021,6 +2081,55 @@ function initEventListeners() {
         }
     });
 
+    // 忘记密码（桌面登录窗口）：切换面板 + 提交重置
+    document.getElementById('perm-forgot-link')?.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.getElementById('perm-login-area').style.display = 'none';
+        document.getElementById('perm-reset-form').style.display = 'block';
+        document.getElementById('perm-reset-error').textContent = '';
+        document.getElementById('perm-reset-token').value = '';
+        document.getElementById('perm-reset-new').value = '';
+        document.getElementById('perm-reset-confirm').value = '';
+    });
+
+    document.getElementById('perm-reset-cancel')?.addEventListener('click', function () {
+        document.getElementById('perm-reset-form').style.display = 'none';
+        document.getElementById('perm-login-area').style.display = 'block';
+    });
+
+    document.getElementById('perm-reset-form')?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const token = document.getElementById('perm-reset-token').value.trim();
+        const np = document.getElementById('perm-reset-new').value;
+        const cp = document.getElementById('perm-reset-confirm').value;
+        const errEl = document.getElementById('perm-reset-error');
+        errEl.textContent = '';
+        if (!token) { errEl.textContent = '请输入重置令牌'; return; }
+        if (np.length < 6) { errEl.textContent = '新密码至少 6 位'; return; }
+        if (np !== cp) { errEl.textContent = '两次输入的密码不一致'; return; }
+        try {
+            const r = await Api.resetPassword(token, np);
+            if (r.status === 200) {
+                errEl.style.color = '#16a34a';
+                errEl.textContent = '密码已重置，请用新密码登录';
+                setTimeout(function () {
+                    document.getElementById('perm-reset-form').style.display = 'none';
+                    document.getElementById('perm-login-area').style.display = 'block';
+                    errEl.style.color = '';
+                    errEl.textContent = '';
+                    document.getElementById('permission-password').value = '';
+                    document.getElementById('permission-password').focus();
+                }, 1500);
+            } else if (r.status === 0) {
+                errEl.textContent = '网络错误，请确认服务已正常运行';
+            } else {
+                errEl.textContent = (r.data && r.data.error) ? r.data.error : '重置失败';
+            }
+        } catch (e2) {
+            errEl.textContent = '重置请求失败，请稍后重试';
+        }
+    });
+
     document.getElementById('notification-close')?.addEventListener('click', function() {
         document.getElementById('notification').classList.remove('show');
     });
@@ -2078,11 +2187,6 @@ function switchTab(tabName) {
             tab.classList.add('active');
         }
     });
-
-    const addBtn = document.getElementById('add-link-btn-bottom');
-    if (addBtn) {
-        addBtn.dataset.tab = tabName;
-    }
 
     document.querySelectorAll('.links-grid').forEach(container => {
         container.style.display = 'none';
@@ -2222,6 +2326,12 @@ function applySiteConfig() {
     renderQuickAccess(site.quickAccess);
     // 自定义 LOGO：前台 logo + favicon（hasCustom→/api/site/logo/frontend；失败回退默认）
     applySiteLogo(site);
+    // 页首天气区：weatherCode 有自定义代码则注入；否则渲染内置天气组件（城市 weatherCity）
+    applyWeatherArea(site);
+    // 首页开幕动画：按后台开关控制（默认开启；prefers-reduced-motion 下自动跳过）
+    applySplash(site.splash !== false);
+    // 默认搜索引擎：预选后台「外观」设置的引擎（百度默认）
+    applyDefaultEngine(site.searchEngine);
     // 搜索快捷项：以后端配置为准（无后端/未配置时回退 CONFIG.QUICK_SEARCHES）
     if (Array.isArray(site.quickSearches) && site.quickSearches.length) {
         CONFIG.QUICK_SEARCHES = site.quickSearches;
@@ -2238,6 +2348,10 @@ function applySiteConfig() {
             // 接管后重跑动态填充（年份 / 访问量），系统状态与版本为静态保留
             if (typeof initYearDisplay === 'function') initYearDisplay();
             if (typeof updateStatsDisplay === 'function') updateStatsDisplay();
+            // 锁定页脚版本号：始终等于 CONFIG.VERSION（构建版本），不在页脚硬编码，避免与更新脱节
+            // 优先取 #footer-version；兼容旧模板仅有 .version class（无 id）的情况，防止已存 config 脱节
+            const fv = footerEl.querySelector('#footer-version') || footerEl.querySelector('.version');
+            if (fv) fv.textContent = 'V' + (CONFIG.VERSION || '');
         }
     } else {
         if (footerEl) {
@@ -2246,9 +2360,13 @@ function applySiteConfig() {
         }
         renderFooterLinks(site.footerLinks);
     }
-    // 问候语依赖 site.greeting，重新渲染一次
-    if (!document.getElementById('greeting-container')?.classList.contains('hidden')) {
+    // 问候语依赖 site.greeting，若当前可见则重新渲染一次
+    if (document.getElementById('greeting-container')?.classList.contains('visible')) {
         showGreeting();
+    }
+    // 动态背景：按后台「外观」设置应用（前台）
+    if (window.QiYiBackground) {
+        QiYiBackground.apply({ effect: (site.bgEffect || 'particles'), target: (site.bgTarget || 'frontend'), isBackend: false });
     }
 }
 
@@ -2264,6 +2382,144 @@ function injectCustomBlocks(site) {
         document.head.appendChild(styleEl);
     }
     styleEl.textContent = site.customCss || '';
+}
+
+// V3.2.33：页首天气区——后台「外观」weatherCode 有自定义嵌入代码则优先注入（如中国天气网 iframe）；
+// 否则渲染内置天气组件：实时温度 + 城市 + 风力湿度 + 3 天预报（数据源 wttr.in，免密钥、支持 CORS）
+function applyWeatherArea(site) {
+    const area = document.getElementById('weather-area');
+    if (!area) return;
+    const code = (site && typeof site.weatherCode === 'string' && site.weatherCode.trim())
+        ? site.weatherCode.trim() : '';
+    if (code) {
+        // 用户自定义嵌入代码（兼容 V3.2.20-3.2.25 的 iframe 天气卡片）
+        stopWeatherWidgetTimer();
+        area.innerHTML = code;
+        area.style.display = '';
+        area.classList.remove('weather-widget-mode');
+        return;
+    }
+    const city = (site && typeof site.weatherCity === 'string' && site.weatherCity.trim())
+        ? site.weatherCity.trim() : '广州';
+    renderWeatherWidget(area, city);
+}
+
+// 天气代码 → 图标 emoji（wttr.in weatherCode 精简映射，未覆盖代码回退 🌡️）
+const WEATHER_CODE_ICON = {
+    113: '☀️', 116: '🌤️', 119: '☁️', 122: '☁️', 143: '🌫️',
+    176: '🌦️', 179: '🌨️', 182: '🌨️', 185: '🌧️', 200: '⛈️',
+    227: '🌨️', 230: '🌨️', 248: '🌫️', 260: '🌫️', 263: '🌦️',
+    266: '🌧️', 281: '🌧️', 284: '🌧️', 293: '🌦️', 296: '🌧️',
+    299: '🌧️', 302: '🌧️', 305: '🌧️', 308: '🌧️', 311: '🌧️',
+    314: '🌧️', 317: '🌧️', 320: '🌨️', 323: '🌨️', 326: '🌨️',
+    329: '🌨️', 332: '🌨️', 335: '🌨️', 338: '🌨️', 350: '🧊',
+    353: '🌦️', 356: '🌧️', 359: '🌧️', 362: '🌧️', 365: '🌧️',
+    368: '🌨️', 371: '🌨️', 374: '🌧️', 377: '🌧️', 386: '⛈️',
+    389: '⛈️', 392: '⛈️', 395: '🌨️'
+};
+function weatherIcon(code) {
+    return WEATHER_CODE_ICON[Number(code)] || '🌡️';
+}
+// 英文风向 → 中文
+function windDirCn(d) {
+    const map = { N: '北', NNE: '东北偏北', NE: '东北', ENE: '东北偏东', E: '东', ESE: '东南偏东', SE: '东南', SSE: '东南偏南', S: '南', SSW: '西南偏南', SW: '西南', WSW: '西南偏西', W: '西', WNW: '西北偏西', NW: '西北', NNW: '西北偏北' };
+    return map[d] || d || '';
+}
+
+let weatherWidgetTimer = null;
+function stopWeatherWidgetTimer() {
+    if (weatherWidgetTimer) { clearTimeout(weatherWidgetTimer); weatherWidgetTimer = null; }
+}
+
+// 渲染内置天气组件（wttr.in 免密钥 JSON）；每 30 分钟自动刷新一次
+function renderWeatherWidget(area, city) {
+    if (!area) return;
+    stopWeatherWidgetTimer();
+    area.innerHTML = '<div class="weather-widget weather-loading">正在获取 <b>' + escapeHtml(city) + '</b> 天气…</div>';
+    area.style.display = '';
+    area.classList.add('weather-widget-mode');
+
+    const url = 'https://wttr.in/' + encodeURIComponent(city) + '?format=j1&lang=zh&m';
+    fetch(url)
+        .then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+        })
+        .then(function (data) { renderWeatherWidgetData(area, city, data); })
+        .catch(function (err) {
+            console.error('天气获取失败:', err);
+            area.innerHTML = '<div class="weather-widget weather-error">天气获取失败（30 分钟后自动重试）</div>';
+        });
+    // 30 分钟自动刷新
+    weatherWidgetTimer = setTimeout(function () { renderWeatherWidget(area, city); }, 30 * 60 * 1000);
+}
+
+// 渲染天气数据：当前温度 + 城市 + 描述 + 风力湿度 + 3 天预报
+function renderWeatherWidgetData(area, city, data) {
+    const cur = data && data.current_condition && data.current_condition[0];
+    const days = (data && data.weather) || [];
+    if (!cur) {
+        area.innerHTML = '<div class="weather-widget weather-error">天气数据为空</div>';
+        return;
+    }
+    const temp = cur.temp_C + '°';
+    const desc = (cur.lang_zh && cur.lang_zh[0] && cur.lang_zh[0].value) ||
+                 (cur.weatherDesc && cur.weatherDesc[0] && cur.weatherDesc[0].value) || '';
+    const icon = weatherIcon(cur.weatherCode);
+    const wind = '💨 ' + windDirCn(cur.winddir16Point) + '风 ' + (cur.windspeedKmph || 0) + 'km/h';
+    const hum = '💧 湿度 ' + (cur.humidity || 0) + '%';
+
+    let fHtml = '';
+    days.slice(0, 3).forEach(function (d, i) {
+        const name = i === 0 ? '今天' : (i === 1 ? '明天' : '后天');
+        const h = (d.hourly && d.hourly.length) ? d.hourly[Math.min(4, d.hourly.length - 1)] : null;
+        const c = (h && h.lang_zh && h.lang_zh[0] && h.lang_zh[0].value) ||
+                  (h && h.weatherDesc && h.weatherDesc[0] && h.weatherDesc[0].value) || '';
+        const ic = weatherIcon(h && h.weatherCode);
+        fHtml += '<div class="ww-day">' +
+            '<span class="ww-day-name">' + name + '</span>' +
+            '<span class="ww-day-icon">' + ic + '</span>' +
+            '<span class="ww-day-desc">' + escapeHtml(c) + '</span>' +
+            '<span class="ww-day-temp">' + d.mintempC + '°~' + d.maxtempC + '°</span>' +
+            '</div>';
+    });
+
+    area.innerHTML =
+        '<div class="weather-widget">' +
+        '  <div class="ww-main">' +
+        '    <span class="ww-temp">' + temp + '</span>' +
+        '    <span class="ww-info">' +
+        '      <span class="ww-city">📍 ' + escapeHtml(city) + '</span>' +
+        '      <span class="ww-desc">' + icon + ' ' + escapeHtml(desc) + '</span>' +
+        '    </span>' +
+        '  </div>' +
+        '  <div class="ww-meta"><span>' + wind + '</span><span>' + hum + '</span></div>' +
+        '  <div class="ww-forecast">' + fHtml + '</div>' +
+        '</div>';
+}
+
+// V3.2.20：首页开幕动画——启动遮罩播放后淡出并移除（尊重 prefers-reduced-motion）
+function applySplash(enabled) {
+    const splash = document.getElementById('splash');
+    if (!splash) return;
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!enabled || reduceMotion) {
+        if (splash.parentNode) splash.parentNode.removeChild(splash);
+        return;
+    }
+    // 页面主内容就绪后（约 1s）淡出遮罩；CSS .splash.done 负责淡出与隐藏
+    setTimeout(function () { splash.classList.add('done'); }, 900);
+    setTimeout(function () { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 1500);
+}
+
+// V3.2.20：默认搜索引擎——后台「外观」设置预选首页引擎（默认百度）。
+// 「综合(SearXNG)」由 applySearchSettings 在确认 SearXNG 已启用后再预选，这里不直接选。
+function applyDefaultEngine(engine) {
+    if (!engine) return;
+    APP_STATE.defaultEngine = engine;
+    if (engine === 'searxng') return;
+    const rb = document.querySelector('input[name="search-engine"][value="' + engine + '"]');
+    if (rb) rb.checked = true;
 }
 
 // 渲染主标签页导航（顺序/名称/显隐由后台配置决定）
@@ -2352,8 +2608,9 @@ async function init() {
     // 更新问候语中的日期信息（每小时更新一次）
     setInterval(() => {
         const greetingText = document.getElementById('greeting-text');
-        if (greetingText && document.getElementById('greeting-container')?.classList.contains('hidden')) {
-            // 如果问候语是隐藏的，更新但不显示
+        const gc = document.getElementById('greeting-container');
+        if (!greetingText || (gc && !gc.classList.contains('visible'))) {
+            // 问候语处于隐藏状态时不刷新文本
             return;
         }
 
