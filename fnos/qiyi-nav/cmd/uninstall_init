@@ -1,5 +1,18 @@
 #!/bin/bash
 
-### This script is called by fnOS appcenter.
-
+### 飞牛卸载前自动备份数据，防止卸载清理应用目录导致数据丢失
+DATA_DIR="/var/apps/qiyi-nav/shares/qiyi-nav/data"
+BK_DIR="/var/apps/qiyi-nav/shares/qiyi-nav/backups"
+mkdir -p "$BK_DIR"
+if [ -d "$DATA_DIR" ]; then
+  TS=$(date +%Y%m%d-%H%M%S)
+  tar -czf "$BK_DIR/qiyi-nav-data-$TS.tar.gz" -C "$(dirname "$DATA_DIR")" "$(basename "$DATA_DIR")" 2>/dev/null
+  # 额外复制到飞牛用户可见卷，卸载清理应用目录后仍可找回
+  for v in /vol1/1000 /vol1/@appdata /vol1; do
+    if [ -d "$v" ]; then
+      cp -a "$BK_DIR/qiyi-nav-data-$TS.tar.gz" "$v/qiyi-nav-data-backup-$TS.tar.gz" 2>/dev/null && { echo "卸载前备份已复制到 $v"; break; }
+    fi
+  done
+  echo "卸载前已备份数据到 $BK_DIR/qiyi-nav-data-$TS.tar.gz"
+fi
 exit 0
