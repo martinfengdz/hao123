@@ -1,12 +1,12 @@
-"""V3.1.3 同步脚本：复用 315 思路，新增 assets 目录分发 + 升版号。"""
+"""V3.1.6 同步脚本：复用 315 思路，新增 assets 目录分发 + 升版号。"""
 import shutil, re, sys, os
 from pathlib import Path
 
 ROOT = Path('C:/Users/win10/Desktop/fsdownload/hao123')
 SRC = ROOT
 BUILD = ROOT / 'fnos' / 'qiyi-nav' / 'app' / 'build'
-OLD = '3.1.3'
-NEW = '3.1.3'
+OLD = '3.1.6'
+NEW = '3.1.6'
 
 # 1) 同步源码到 fnos 构建副本
 # 注意：外层 fnos/qiyi-nav/manifest 是 FPK 元数据唯一真源，fnpack 直接读取它，
@@ -65,5 +65,5 @@ for path in SRC.rglob('*'):
     except Exception:
         pass
 
-print(f'\nversion replace: {count} files (3.1.3 -> 3.1.3)')
+print(f'\nversion replace: {count} files (3.1.6 -> 3.1.6)')
 print('build_316 done')
