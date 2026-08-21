@@ -1,4 +1,4 @@
-# 奇易智能导航系统（V3.1.3）
+# 奇易智能导航系统（V3.3.01）
 
 带**后台管理**与 **Docker 部署**的网址导航站。在原纯静态导航站基础上增加了：
 
@@ -63,7 +63,9 @@ node server.js
 可用环境变量覆盖：
 
 ```bash
-PORT=9000 ADMIN_PASSWORD=你的密码 SESSION_SECRET=随机密钥 node server.js
+PORT=9000 ADMIN_PASSWORD=你的密码 node server.js
+# SESSION_SECRET 可不填：省略时 server.js 会为每个安装自动生成唯一密钥并持久化到
+# DATA_DIR/secret.txt（重启后保持稳定）；如需自定义签名密钥才显式设置。
 ```
 
 ---
@@ -73,7 +75,7 @@ PORT=9000 ADMIN_PASSWORD=你的密码 SESSION_SECRET=随机密钥 node server.js
 ### 方式 A：docker-compose（推荐）
 
 ```bash
-# 1. 按需修改 docker-compose.yml 中的 ADMIN_PASSWORD / SESSION_SECRET
+# 1. 按需修改 docker-compose.yml 中的 ADMIN_PASSWORD（SESSION_SECRET 可不填，省略则自动生成）
 docker compose up -d --build
 ```
 
@@ -87,7 +89,6 @@ docker build -t qiyi-nav .
 docker run -d --name qiyi-nav \
   -p 1315:1315 \
   -e ADMIN_PASSWORD=你的密码 \
-  -e SESSION_SECRET=随机密钥 \
   -v $(pwd)/data:/app/data \
   --restart unless-stopped \
   qiyi-nav
@@ -184,7 +185,7 @@ git push -u origin main
 推送后，GitHub Actions 会自动执行 `.github/workflows/docker.yml`：
 
 - 推到 `main` → 构建 `ghcr.io/<用户名>/qiyi-nav:latest`
-- 打版本 tag `v3.1.3` → 同时出 `:3.1.3`、`:2.3`、`:latest`
+- 打版本 tag `v3.3.01` → 同时出 `:3.3.01`、`:2.3`、`:latest`
 
 镜像地址固定为：
 
@@ -220,10 +221,10 @@ docker run -d --name qiyi-nav \
 1. 改代码后提交并打 tag：
    ```bash
    git add -A && git commit -m "fix: xxx"
-   git tag v3.1.3
+   git tag v3.3.01
    git push && git push --tags
    ```
-2. GitHub Actions 自动构建新镜像（`:latest` + `:3.1.3`）。
+2. GitHub Actions 自动构建新镜像（`:latest` + `:3.3.01`）。
 3. 飞牛上「更新容器」→ 重新拉取 `latest` 重建（挂载的 `data` 卷保留，导航数据不丢）。
    - 或部署一个 `watchtower` 容器监控 `qiyi-nav`，镜像一更新自动重启。
 
@@ -233,7 +234,7 @@ docker run -d --name qiyi-nav \
 
 ### 版本号约定
 
-- `package.json` 与 `server.js` 顶部 `VERSION` 保持一致（当前 `3.1.3`）。
+- `package.json` 与 `server.js` 顶部 `VERSION` 保持一致（当前 `3.3.01`）。
 - tag 用 `vX.Y.Z` 语义化版本。
 
 ---
@@ -273,10 +274,3 @@ docker compose up -d --build
 - `GET /api/settings` / `PUT /api/settings`：读取 / 保存集成配置（写入需登录）。
 
 > 注意：`server.js` 代理默认 8 秒超时；SearXNG 实例需开启 `format: json`（本项目 `searxng/settings.yml` 已配置）。
-
-
-## 界面预览
-
-![前端界面预览](assets/screenshot-frontend.png)
-
-> 前端导航首页界面截图。
