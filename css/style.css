@@ -40,6 +40,12 @@
     --light-bg: #2d3748;                /* 暗色主题浅色背景 */
     --dark-bg: #1a202c;                 /* 暗色主题深色背景 */
     --border-color: #4a5568;            /* 暗色主题边框颜色 */
+    --primary-color: #6799fe;           /* 强调色改为 deepseek 品牌蓝 */
+}
+
+/* deepseek 风格深色背景：近黑 #0a0a0a → 深海军蓝 #0d1017 */
+body.dark-mode {
+    background: linear-gradient(135deg, #0a0a0a 0%, #0d1017 100%);
 }
 
 /* ==================== 基础样式重置 ==================== */
@@ -76,10 +82,11 @@ body {
 
 /* ==================== 头部区域样式 ==================== */
 .header {
+    position: relative;
     background: rgba(255, 255, 255, 0.95);
     border-radius: var(--border-radius);
-    padding: 10px 15px;
-    margin-bottom: 12px;
+    padding: 6px 14px 8px;             /* V3.2.34：压缩上下空白（12/14→6/8） */
+    margin-bottom: 10px;
     box-shadow: var(--box-shadow);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -143,10 +150,9 @@ body {
     flex-shrink: 0;
     line-height: 0;
     text-align: left;
-    align-self: center;
 }
 .site-logo img {
-    max-height: 60px;
+    max-height: 64px;
     max-width: 200px;
     width: auto;
     height: auto;
@@ -157,30 +163,75 @@ body {
 .site-logo img:hover { transform: scale(1.04); }
 .dark-mode .site-logo img { filter: brightness(0.95); }
 @media (max-width: 640px) {
-    .site-logo img { max-height: 46px; max-width: 150px; }
+    .site-logo img { max-height: 48px; max-width: 150px; }
 }
 
-/* 头部主区：LOGO + 两个日期 居左成组，问候语居中，工具按钮推到最右 */
+/* V3.2.33：页首横向 3 列布局（高度压缩）— 左 LOGO+日期三行竖排（日期[含周X 第N周] / 农历 / 版权·无痕）/ 中 天气（问候浮层居中盖其上，30s 后露天气）/ 右 三按钮横排居中 */
 .header-main {
     display: flex;
-    align-items: center;
-    gap: 18px;
-    flex-wrap: wrap;
+    align-items: stretch;                /* 三列等高 */
+    gap: 8px 14px;                      /* V3.2.34：压缩（10/16→8/14） */
+    min-width: 0;
+    min-height: 90px;                   /* V3.2.33:104 → V3.2.34:90 */
 }
-.header-brand {
+/* 左列：LOGO + 日期三行竖排 */
+.col-left {
     display: flex;
-    align-items: center;
-    gap: 14px;
+    align-items: center;                 /* LOGO 与日期三行 垂直居中 */
+    gap: 10px;
+    flex: 0 0 auto;
     min-width: 0;
 }
-
-/* 时间显示区域整体布局 */
-.time-display {
+.col-left .site-logo {
+    flex-shrink: 0;
+    align-self: stretch;                 /* LOGO 垂直铺满左列高度 */
+    display: flex;
+    align-items: center;
+    line-height: 0;
+}
+.col-left .site-logo img {
+    max-height: 78px;                    /* V3.2.34：高度压缩（88→78） */
+    max-width: 168px;
+}
+/* 日期三行竖排：日期[含周X 第N周] / 农历 / 版权·无痕 */
+.date-stack {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    justify-content: center;
+    gap: 1px;                            /* V3.2.34：紧凑（2→1） */
+    min-width: 0;
+    flex-shrink: 0;
+    line-height: 1.15;                  /* V3.2.34：（1.25→1.15） */
+}
+.date-stack #current-time { font-size: 1.08rem; font-weight: 800; color: var(--text-color); letter-spacing: .3px; }
+.date-stack #lunar-date { font-size: .82rem; color: var(--text-light); }
+
+/* 中列：天气组件（问候浮层居中盖其上），定位上下文 = .col-center */
+.col-center {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-width: 0;
+    min-height: 54px;                    /* V3.2.34：高度压缩（64→54） */
+}
+
+/* 右列：主题/主页/刷新 三按钮横排居中 */
+.col-right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;                            /* V3.2.34：紧凑（8→7） */
+    flex-wrap: wrap;
+    flex: 0 0 auto;
     min-width: 0;
 }
+.col-right .btn { min-width: 78px; justify-content: center; padding: 5px 9px; min-height: 28px; font-size: .82rem; }
+
+/* 站点名 / 版权年份 + 无痕标识 */
+.brand-name { font-size: 1.05rem; font-weight: 800; color: var(--text-color); letter-spacing: .5px; }
+.brand-copy { font-size: 0.7rem; color: var(--text-light); opacity: .85; }
 
 /* 年份显示样式 */
 #current-year {
@@ -190,51 +241,68 @@ body {
     opacity: 0.8;
 }
 
-/* ==================== 问候语样式 ==================== */
+/* ==================== 问候语横幅（V3.2.33：在 .col-center 内居中盖住天气组件；30s 自动关闭后露天气） ==================== */
 .greeting-container {
-    display: flex;
+    position: absolute;
+    left: 50%;
+    top: 50%;                                /* 居中于 .col-center（= 天气组件中央） */
+    transform: translate(-50%, calc(-50% - 60px)); /* 默认隐藏：从上方 60px 处（滑入起点） */
+    z-index: 6;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 8px 15px;
-    background: linear-gradient(135deg, rgba(26, 115, 232, 0.1), rgba(66, 133, 244, 0.1));
-    border-radius: var(--border-radius);
-    border-left: 3px solid var(--primary-color);
-    margin: 8px 0;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 1;
-    max-height: 50px;
+    padding: 8px 18px 12px;                  /* 底部留白给进度条 */
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 55%, #667eea 100%);
+    color: #fff;
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(30, 60, 114, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     overflow: hidden;
+    pointer-events: auto;
+    white-space: nowrap;
+    opacity: 0;
 }
 
 .dark-mode .greeting-container {
-    background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(66, 133, 244, 0.15));
-    border-left-color: var(--primary-light);
+    background: linear-gradient(135deg, #0f1b33 0%, #1e3c72 55%, #3b4f9e 100%);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* 显示态：触发弹性滑入动画（cubic-bezier 回弹）；终点居中盖住天气组件 */
+.greeting-container.visible {
+    opacity: 1;
+    animation: greetingSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 居中滑入：起点上方 60px 处 → 终点居中（轻微回弹） */
+@keyframes greetingSlideIn {
+    0%   { transform: translate(-50%, calc(-50% - 80px)); opacity: 0; }
+    60%  { transform: translate(-50%, calc(-50% + 6px));  opacity: 1; }
+    80%  { transform: translate(-50%, calc(-50% - 4px));  opacity: 1; }
+    100% { transform: translate(-50%, -50%);              opacity: 1; }
 }
 
 .greeting-container.hidden {
     opacity: 0;
-    max-height: 0;
-    padding: 0;
-    margin: 0;
-    transform: translateY(-10px);
     pointer-events: none;
+    transform: translate(-50%, calc(-50% - 60px));
 }
 
 #greeting-text {
     font-size: 0.95rem;
     font-weight: 500;
-    color: var(--text-color);
+    color: #fff;
     text-align: center;
-    flex: 1;
+    flex: 0 0 auto;
     padding: 0 5px;
 }
 
-/* 关闭问候语按钮 */
+/* 关闭问候语按钮（深色渐变背景上的浅色按钮） */
 .btn-close-greeting {
     background: none;
     border: none;
-    color: var(--text-light);
+    color: rgba(255, 255, 255, 0.85);
     cursor: pointer;
     font-size: 0.9rem;
     width: 24px;
@@ -248,51 +316,52 @@ body {
 }
 
 .btn-close-greeting:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: var(--danger-color);
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
 }
 
 .dark-mode .btn-close-greeting:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.22);
 }
 
-/* 响应式调整 */
+/* 底部 30 秒倒计时进度条（width 100%→0，linear 匀速；悬停暂停） */
+.greeting-progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, #00f2fe, #4facfe);
+    border-radius: 0 0 14px 14px;
+    animation: none;
+}
+.greeting-container.visible .greeting-progress {
+    animation: greetingProgress 30s linear forwards;
+}
+@keyframes greetingProgress {
+    from { width: 100%; }
+    to   { width: 0; }
+}
+/* 悬停暂停（JS 同时暂停 30s 定时器） */
+.greeting-container.paused .greeting-progress {
+    animation-play-state: paused;
+}
+
+/* 窄屏：页首三列纵向堆叠（LOGO+日期上 / 天气中 / 按钮下），按钮横排；问候浮层仍居中盖天气 */
 @media (max-width: 768px) {
-    .greeting-container {
-        padding: 6px 12px;
-        margin: 6px 0;
-    }
-
-    #greeting-text {
-        font-size: 0.85rem;
-    }
+    .header-main { flex-direction: column; align-items: center; gap: 8px; min-height: 0; }
+    .col-left { flex-direction: column; align-items: center; gap: 6px; }
+    .col-left .site-logo img { max-height: 70px; max-width: 150px; }
+    .date-stack { align-items: center; text-align: center; }
+    .col-center { width: 100%; min-height: 56px; }
+    .col-right { justify-content: center; }
+    .col-right .btn { min-width: 78px; padding: 5px 8px; min-height: 28px; font-size: .8rem; }
+    .greeting-container { padding: 7px 14px 11px; }
+    #greeting-text { font-size: 0.85rem; }
 }
-
 @media (max-width: 480px) {
-    .greeting-container {
-        padding: 5px 10px;
-        margin: 5px 0;
-    }
-
-    #greeting-text {
-        font-size: 0.8rem;
-    }
-}
-
-/* 头部工具按钮容器 */
-.header-tools {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    margin-left: auto;
-}
-
-@media (min-width: 768px) {
-    .header-tools {
-        justify-content: flex-end;
-    }
+    .greeting-container { padding: 6px 12px 10px; }
+    #greeting-text { font-size: 0.8rem; }
 }
 
 /* ==================== 按钮通用样式 ==================== */
@@ -1072,7 +1141,7 @@ body {
 @media (min-width: 768px) {
     .links-footer {
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: flex-end;
         align-items: center;
     }
 }
@@ -1821,7 +1890,7 @@ footer {
 
 /* ==================== 打印样式 ==================== */
 @media print {
-    .header-tools, .search-section, .add-link-btn, 
+    .search-section, .add-link-btn, 
     .link-actions, .notification, .floating-buttons,
     .quick-access, .footer-links, .footer-tools,
     .admin-panel, .batch-actions {
@@ -1900,4 +1969,189 @@ footer {
 .search-result-title { font-weight: 600; color: var(--primary-color, #1a73e8); font-size: 1.02rem; }
 .search-result-content { color: var(--text-color, #444); font-size: 0.9rem; margin: 4px 0; line-height: 1.5; }
 .search-result-url { color: var(--success-color, #28a745); font-size: 0.8rem; word-break: break-all; }
+
+/* ============ 前台首页：鼠标动态粒子连线背景 ============ */
+/* 固定浮层，置于页面内容之上、但低于浮窗/弹窗(z-index>=999)；
+   pointer-events:none 保证不拦截任何点击交互 */
+#bg-particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    display: block;
+}
+
+/* ============ V3.2.20：首页进入「开幕动态」遮罩 ============ */
+/* 全屏启动遮罩：LOGO + 标题 + 加载条，脚本就绪后淡出并移除；
+   尊重 prefers-reduced-motion：系统要求减少动效时直接隐藏不播放 */
+.splash {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-color, #0d1017);
+    transition: opacity .45s ease, visibility .45s ease;
+}
+.splash-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.splash-logo {
+    width: 74px; height: 74px; border-radius: 18px; object-fit: cover;
+    box-shadow: 0 6px 24px rgba(103, 153, 254, .25);
+    animation: splashPulse 1.6s ease-in-out infinite;
+}
+@keyframes splashPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+.splash-title { font-size: 1.35rem; font-weight: 800; letter-spacing: 1px; color: var(--text-color, #e8eaed); }
+.splash-sub { font-size: .85rem; color: var(--text-light, #9aa4b2); }
+.splash-bar {
+    width: 150px; height: 3px; border-radius: 3px; overflow: hidden;
+    background: rgba(128,128,128,.18); margin-top: 4px;
+}
+.splash-bar i {
+    display: block; height: 100%; width: 40%; border-radius: 3px;
+    background: linear-gradient(90deg, #6799fe, #8fb4ff);
+    animation: splashSlide 1.1s ease-in-out infinite;
+}
+@keyframes splashSlide { 0% { transform: translateX(-110%); } 100% { transform: translateX(280%); } }
+.splash.done { opacity: 0; visibility: hidden; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+    .splash { display: none; }
+    .splash-logo { animation: none; }
+    .splash-bar i { animation: none; }
+}
+
+/* ============ V3.2.20/3.2.22/3.2.26：页首天气区 ============ */
+/* 后台「外观」配置 weatherCode 嵌入代码后显示；weatherCode 留空时渲染内置天气组件；
+   V3.2.33 起位于页首中列（.col-center），问候浮层居中盖其上 */
+.weather-area {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    flex: none;
+}
+.weather-area iframe { max-width: 100%; border: 0; border-radius: 8px; display: block; }
+.weather-area.weather-empty { display: none !important; }
+
+/* V3.2.26：内置天气组件（wttr.in 免密钥）—— 实时温度 + 城市 + 风力湿度 + 3 天预报 */
+.weather-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, rgba(26, 115, 232, 0.08), rgba(66, 133, 244, 0.10));
+    border: 1px solid rgba(26, 115, 232, 0.22);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: var(--text-color);
+}
+.dark-mode .weather-widget {
+    background: linear-gradient(135deg, rgba(26, 115, 232, 0.16), rgba(66, 133, 244, 0.18));
+    border-color: rgba(26, 115, 232, 0.4);
+}
+.weather-widget.weather-loading,
+.weather-widget.weather-error { padding: 8px 14px; color: var(--text-light); font-size: 0.85rem; white-space: nowrap; }
+/* 主区：温度大字 + 城市/描述 */
+.ww-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.ww-temp {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+    white-space: nowrap;
+}
+.dark-mode .ww-temp { color: #7eb3ff; }
+.ww-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.ww-city { font-weight: 600; font-size: 0.9rem; color: var(--text-color); }
+.ww-desc { color: var(--text-light); font-size: 0.82rem; white-space: nowrap; }
+/* 元信息行：风力 + 湿度 */
+.ww-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    color: var(--text-light);
+    font-size: 0.8rem;
+}
+/* 3 天预报横排 */
+.ww-forecast {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    border-top: 1px dashed rgba(26, 115, 232, 0.25);
+    padding-top: 5px;
+    margin-top: 2px;
+    min-width: 0;
+}
+.ww-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    font-size: 0.78rem;
+    min-width: 0;
+}
+.ww-day-name { font-weight: 600; color: var(--text-color); }
+.ww-day-icon { font-size: 1rem; line-height: 1.1; }
+.ww-day-desc { color: var(--text-light); max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ww-day-temp { color: var(--text-color); white-space: nowrap; }
+@media (max-width: 480px) {
+    .weather-widget { padding: 7px 10px; }
+    .ww-temp { font-size: 1.4rem; }
+    .ww-forecast { gap: 6px; }
+}
+
+/* ============ V3.2.20：前台链接卡片「免密登录」按钮 ============ */
+/* 链接条目设有登录用户名/密码时显示小钥匙按钮，点击打开免密登录中转页 */
+.link-login-btn {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(103, 153, 254, .14);
+    color: var(--primary-color, #6799fe);
+    font-size: .72rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease, background .15s ease;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.link-item:hover .link-login-btn { opacity: 1; }
+.link-login-btn:hover { background: rgba(103, 153, 254, .28); }
+.link-login-btn.has-cred { opacity: .55; }
+.link-item:hover .link-login-btn.has-cred { opacity: 1; }
+@media (hover: none) {
+    .link-login-btn.has-cred { opacity: .55; }
+}
+/* 亮色主题下钥匙按钮更醒目 */
+body:not(.dark-mode) .link-login-btn {
+    background: rgba(26, 115, 232, .08);
+    color: #1a73e8;
+}
+body:not(.dark-mode) .link-login-btn:hover { background: rgba(26, 115, 232, .18); }
 
