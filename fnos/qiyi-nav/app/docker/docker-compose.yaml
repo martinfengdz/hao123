@@ -5,9 +5,9 @@ services:
       context: ../build
       dockerfile: Dockerfile
     # 本地构建出的镜像名（不依赖任何外部镜像仓库，避免 invalid reference 报错）
-    image: qiyi-nav:3.1.3
+    image: qiyi-nav:3.2.33
     # 如需改用 GHCR 在线镜像：删掉上面 build 段，并取消下一行注释（<用户名> 必须全小写）
-    # image: ghcr.io/<你的GitHub用户名>/qiyi-nav:3.1.3
+    # image: ghcr.io/<你的GitHub用户名>/qiyi-nav:3.2.33
     container_name: qiyi-nav
     restart: unless-stopped
     ports:
@@ -16,7 +16,14 @@ services:
     volumes:
       - "/var/apps/qiyi-nav/shares/qiyi-nav/data:/app/data"
     environment:
-      # 以下均写死，不依赖 fnOS 向导环境变量注入（实测不会被注入）
+      # 以下均写死，不依赖 fnOS 向导环境变量注入（实测不会被注入）。
+      # SESSION_SECRET 不写：server.js 会为每个安装自动生成唯一密钥并持久化到
+      # /app/data/secret.txt（重启后稳定），无需手动设置。
       - PORT=1315
       - ADMIN_PASSWORD=admin
-      - SESSION_SECRET=qiyi-nav-fixed-secret
+      # 忘记密码方式一（无 UI，直接改密）：临时取消下一行注释并填上新密码，重启容器即可重置（其余配置/链接保留），登录后请删掉该行
+      # - QY_RESET_PASSWORD=admin
+      # 忘记密码方式二（带登录页"忘记密码？"按钮）：临时取消下一行注释设一个令牌，重启后在登录页点"忘记密码"填此令牌+新密码即可改密，用完删掉该行
+      # - QY_RESET_TOKEN=请设置一个一次性令牌
+      # 后台"有更新版"提示：自动比对 GitHub Releases 最新版（你的发布仓库）
+      - UPDATE_REPO=martinfengdz/hao123
