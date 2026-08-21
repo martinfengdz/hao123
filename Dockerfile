@@ -3,7 +3,7 @@ FROM node:18-alpine
 
 # 元数据
 LABEL org.opencontainers.image.title="奇易智能导航" \
-      org.opencontainers.image.version="3.1.3" \
+      org.opencontainers.image.version="3.3.01" \
       org.opencontainers.image.description="带后台管理与 Docker 部署的网址导航（零依赖 Node 后端）"
 
 # 时区：国内 NAS 日志/时间显示正确
@@ -21,6 +21,7 @@ COPY admin.html ./
 COPY index.html ./
 COPY scripts ./scripts
 COPY assets ./assets
+COPY default-pages ./default-pages
 
 # 镜像内置默认种子（位于 /app/data 挂载点之外，保证挂载空卷时也能初始化出默认链接）
 COPY data/seed.json /app/default-seed.json
@@ -30,14 +31,16 @@ RUN mkdir -p /app/data
 
 ENV PORT=1315
 ENV ADMIN_PASSWORD=admin
-ENV SESSION_SECRET=qiyi-nav-fixed-secret
+# SESSION_SECRET 可不设：不设时 server.js 会为每个安装自动生成唯一密钥并持久化到
+# /app/data/secret.txt（重启后保持稳定）。如需自定义签名密钥，在此或 docker-compose 设置即可。
 ENV DATA_DIR=/app/data
 
 EXPOSE 1315
 
-# 容器健康检查（飞牛 Docker 可显示容器健康状态）
+# 容器健康检查（飞牛 Docker 可显示容器健康状态）。使用 Node 内置 http 探测，
+# 不依赖 busybox wget，兼容性更好。
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1:1315/api/health || exit 1
+  CMD node -e "require('http').get('http://127.0.0.1:1315/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 # 生产环境建议放在反向代理（Nginx/Caddy）后并启用 HTTPS
 CMD ["node", "server.js"]
