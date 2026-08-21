@@ -27,7 +27,11 @@
   }
 
   const Api = {
-    getLinks: function () { return req('GET', '/api/links'); },
+    // full=true 时请求 /api/links?full=1（后台编辑需登录，返回含登录用户名/密码的完整字段）；
+    // 默认公开视图不含 luser/lpass，仅含 hasCred 布尔（供前台显示「免密登录」入口）。
+    getLinks: function (full) { return req('GET', '/api/links' + (full ? '?full=1' : '')); },
+    // 免密登录中转页：拉取单条链接的登录凭据（公开，信任模型与 /api/links 一致）
+    getCred: function (id) { return req('GET', '/api/cred/' + encodeURIComponent(id)); },
     saveLinks: function (data) { return req('PUT', '/api/links', { data: data }); },
     login: function (password) { return req('POST', '/api/login', { password: password }); },
     logout: function () { return req('POST', '/api/logout'); },
@@ -66,7 +70,48 @@
     importHtml: function (html) { return req('POST', '/api/import-html', { html: html }); },
     // 自定义 LOGO 上传/清除：which ∈ {'frontend','backend'}；dataUrl 形如 data:image/png;base64,...
     uploadLogo: function (which, dataUrl) { return req('POST', '/api/site/upload-logo', { which: which, dataUrl: dataUrl }); },
-    clearLogo: function (which) { return req('POST', '/api/site/clear-logo', { which: which }); }
+    clearLogo: function (which) { return req('POST', '/api/site/clear-logo', { which: which }); },
+    // 自建页面：列表/创建/读取/更新/删除
+    pages: function () { return req('GET', '/api/pages'); },
+    createPage: function (name, content) { return req('POST', '/api/pages', { name: name, content: content }); },
+    getPage: function (name) { return req('GET', '/api/pages/' + encodeURIComponent(name)); },
+    updatePage: function (name, content) { return req('PUT', '/api/pages/' + encodeURIComponent(name), { content: content }); },
+    deletePage: function (name) { return req('DELETE', '/api/pages/' + encodeURIComponent(name)); },
+    // 版本更新检查（后台"有更新版"提示）
+    updateCheck: function () { return req('GET', '/api/update-check'); },
+    // 数据备份：下载 DATA_DIR 全量 zip（触发浏览器下载）
+    backup: function () {
+      return fetch('/api/backup', { method: 'GET', credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) {
+            return res.json().then(function (j) { throw new Error(j.error || ('HTTP ' + res.status)); })
+              .catch(function () { throw new Error('HTTP ' + res.status); });
+          }
+          const cd = res.headers.get('Content-Disposition') || '';
+          const m = cd.match(/filename="?([^";]+)"?/);
+          const fname = m ? m[1] : ('qiyi-nav-backup-' + Date.now() + '.zip');
+          return res.blob().then(function (blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = fname; document.body.appendChild(a); a.click();
+            document.body.removeChild(a); setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+          });
+        });
+    },
+    // 数据还原：上传 zip 文件（raw binary），后端会先自动备份再覆盖
+    restore: function (file) {
+      return file.arrayBuffer().then(function (buf) {
+        return fetch('/api/restore', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/zip' }, body: buf
+        }).then(function (res) {
+          return res.text().then(function (text) {
+            let data = null; try { data = JSON.parse(text); } catch (e) { data = text; }
+            return { status: res.status, ok: res.ok, data: data };
+          });
+        });
+      });
+    }
   };
 
   window.Api = Api;
